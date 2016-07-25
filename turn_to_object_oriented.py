@@ -433,9 +433,6 @@ def main():
     if option == '14':
         connections = connection.get_senders_and_receivers_by_month(1, 1)
         connection.count_connections(connections)
-        # for connection in connections:
-        #    print(connection.sender, connection.receiver)
-
 
     if option == '31':
         department = Department("")
