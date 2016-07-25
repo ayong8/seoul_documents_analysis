@@ -28,8 +28,6 @@ class Network():
 
         weights = [ weight/2 for (source, target, weight) in edges ]
 
-        # draw nodes, edges and labels
-
         # we can now added edge thickness and edge color
         nx.draw_networkx_edges(G, graph_pos, width=weights, alpha=1, edge_color='black')
         nx.draw_networkx_nodes(G, graph_pos, node_size=100, node_color='red', alpha=1)
