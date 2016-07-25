@@ -454,19 +454,6 @@ def main():
             network = Network(edges)
             network.make_graph(policy_id, month)
 
-            #for edge, count in edges.items():
-            #    sender = edge[0]
-            #    receiver = edge[1]
-            #    print(policy_id, month, sender, receiver, count)
-
-        #edges = [ (10,13), (11,13), (13,2), (2,10) ]
-        #edges2 = [(10, 3), (11, 13), (13, 2), (19, 10)]
-
-
-
-
-
-
 def menu():
 
     print(
