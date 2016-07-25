@@ -1,5 +1,6 @@
 import sqlite3
 import csv
+import copy
 
 class Department:
     def __init__(self, name):
@@ -31,26 +32,21 @@ class Department:
 
     ### txt 파일로
     def verify_dep_names_from_txt_file(self, txt_file_name, depts_list, towns_list):
-        print("here")
         # If there is a match
         txt_file = open(txt_file_name, "r")
         filtered_output = {}
         total_count = 0
 
         for line in txt_file.readlines():
-            #print line
             sender = line.split("\t")[0]
             receiver = line.split("\t")[1]
             count = line.split("\t")[2]
-            #print(sender, receiver, count)
-            #print(receiver)
 
             if any(dept in receiver for dept in depts_list):
                 for dept1 in depts_list:
                     if dept1 in receiver:
                         if '(' in receiver:
                             if all(town not in receiver for town in towns_list) and ('서울특별시' in receiver):
-                                #print(sender, dept1, count)
                                 filtered_output[(sender, dept1)] = count
                                 total_count += int(count)
                         else:
@@ -60,6 +56,36 @@ class Department:
 
         print("total count of filtered docs: " + str(total_count))
         return filtered_output
+
+    ### txt 파일로
+    def verify_dep_names_by_policy_and_date(self, edges_dict, depts_list, towns_list):
+        total_count = 0
+        filtered_edges_dict = {}
+
+        for key, edges in edges_dict.items():
+            for edge, count in edges.items():
+                sender = edge[0]
+                receiver = edge[1]
+                if any(dept in receiver for dept in depts_list):
+                    for dept1 in depts_list:
+                        if dept1 in receiver:
+                            if '(' in receiver:
+                                if all(town not in receiver for town in towns_list) and ('서울특별시' in receiver):
+                                    # Change the key to the new one
+                                    if key not in filtered_edges_dict.keys():
+                                        filtered_edges_dict[key] = {}
+                                    filtered_edges_dict[key][(sender, dept1)] = count
+                                    total_count += 1
+                            else:
+                                if key not in filtered_edges_dict.keys():
+                                    filtered_edges_dict[key] = {}
+                                filtered_edges_dict[key][(sender, dept1)] = count
+                                total_count += 1
+                            break
+
+        print("total count of filtered docs: " + str(total_count))
+        print(filtered_edges_dict)
+        return filtered_edges_dict
 
     def write_csv_for_gephi(self, depts_list, filtered_connections_dict, csv_file_name):
         with open(csv_file_name, 'w') as csvfile:

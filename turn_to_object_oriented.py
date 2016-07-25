@@ -11,304 +11,15 @@ import requests
 from tqdm import tqdm
 from datetime import datetime, timedelta
 
+from Policy import Policy
+from Document import Document
+from PolicyDocument import PolicyDocument
+from Department import Department
+from Network import Network
+from Connection import Connection
+
 DATABASE_NAME = "./seoul_documents.db"
 
-class Policy:
-    def __init__(self, id, title, area, period, department, is_public, writer, docs):
-        self.id = id
-        self.title = title
-        self.area = area
-        self.period = period
-        self.department = department
-        self.is_public = is_public
-        self.writer = writer
-        self.docs = docs
-
-    def insert_policy_info_to_DB(self, cursor):
-        cursor.execute("insert into policy (id, title, area, department, period, is_public, writer) \
-                       values(?,?,?,?,?,?,?);", (self.id, self.title, self.area, self.department, self.period, self.is_public, self.writer) )
-
-
-class Document:
-    def __init__(self, doc_id, idx, date, title, writer, work_category, sender, receiver, url, url_for_html_file, url_for_hwp_file, hwp_file_name):
-        self.doc_id = doc_id
-        self.idx = idx
-        self.date = date
-        self.writer = writer
-        self.work_category = work_category
-        self.title = title
-        self.sender = sender
-        self.receiver = receiver
-        self.url = url
-        self.url_for_html_file = url_for_html_file
-        self.url_for_hwp_file = url_for_hwp_file
-        self.hwp_file_name = hwp_file_name
-
-    def filter_and_insert_doc_info_to_DB(self, doc_info):
-
-        # dictonary for every loop
-        #print(doc_info)
-
-        useless_work_cards = [u'예산집행및회계관리', u'복무관리', u'공무직관리', u'관용차량관리', u'인사관리', u'급여및수당관리', u'교육훈련관리']
-        useless_title_words = [u'일지', u'휴가']
-
-        # row_value[0]: package_id, 1: date, 2: work category, 3: title, 4: doc num
-        # 5: writer, 6: preservation period, 7: 발신부서, 8: public or not, 9: copyright, 10: url
-        ### 공개 = 1, 비공개 = 0, 부분공개 = 2
-        # 문서가 비공개가 아닐 경우, 그리고 문서 url이 존재하는 문서들만 작업을 진행 (공개 혹은 부분공개일 경우...)
-        if (doc_info[8] != 0) and (doc_info[9] != None):
-            # 업무교류와 관계없는 과제카드들을 제외
-            if doc_info[5] not in useless_work_cards:
-                # 업무교류와 상관없는 제목을 가진 문서들을 제외
-                if all(word not in doc_info[6] for word in useless_title_words):
-                    self.idx = doc_info[0]
-                    self.doc_id = str(doc_info[1])
-                    self.date = doc_info[4]
-                    self.title = doc_info[6]
-                    self.writer = doc_info[7]
-                    self.receiver = doc_info[2]
-                    self.url = doc_info[9]
-                    self.url_for_html_file = ''
-                    self.url_for_hwp_file = ''
-                    self.hwp_file_name = ''
-
-    def extract_doc_info_from_web_for_policy(self):
-        pass
-
-class PolicyDocument(Document):
-    def __init__(self, policy_id, doc_id, title, policy_title, date, sender, receiver, writer, url, url_for_html_file, url_for_hwp_file, hwp_file_name, is_public):
-        super().__init__(doc_id, "", date, title, writer, "", sender, receiver, url, url_for_html_file, url_for_hwp_file, hwp_file_name)
-        self.policy_id = policy_id
-        self.policy_title = policy_title
-        self.is_public = is_public
-
-class Document:
-    def __init__(self, idx, work_category, title, sender, receiver):
-        self.idx = idx
-        self.work_category = work_category
-        self.title = title
-        self.sender = sender
-        self.receiver = receiver
-
-    def count_documents_by_condition(self):
-        conn = sqlite3.connect(DATABASE_NAME)
-        cursor = conn.cursor()
-        result = cursor.execute("select count(*) from documents_201501 where (public = 1 or public = 2)")
-        for i in result:
-            print(i)
-
-    def get_doc_info(self, from_month, to_month):
-        conn = sqlite3.connect(DATABASE_NAME)
-        cursor = conn.cursor()
-        documents = []
-
-        # Put together connections of all months
-        for i in range(from_month, to_month + 1):
-            # 2d array expected (e.g., [ [sender1, receiver1-1,receiver1-2], [sender2, receiver2], ... ]
-            if i < 10:
-                documents_for_month = cursor.execute("SELECT idx, work_category, title, sender, receiver FROM documents_20150%d" % i)
-            else:
-                documents_for_month = cursor.execute("SELECT idx, work_category, title, sender, receiver FROM documents_2015%d" % i)
-
-            for doc in documents_for_month:
-                document = Document(doc[0], doc[1], doc[2], doc[3], doc[4])
-                documents.append(document)
-
-        conn.commit()
-        conn.close()
-
-        return documents
-
-    def write_results_to_txt(self, txt_file_name, documents):
-        with open(txt_file_name, 'w') as txtfile:
-            for document in documents:
-                if not document.receiver:
-                    document.receiver = ""
-                    print(str(document.idx) + "\t" + document.work_category + "\t" + document.title + "\t" + document.sender + "\t" + document. receiver)
-                    txtfile.write(str(document.idx) + "\t" + document.work_category + "\t" + document.title + "\t" + document.sender + "\t" + document. receiver)
-
-    def verify_dep_names_from_txt_file(self, txt_file_name, depts_list, towns_list):
-        # If there is a match
-        txt_file = open(txt_file_name, "r")
-        filtered_output = {}
-        total_count = 0
-
-        for line in txt_file.readlines():
-            # print line
-            sender = line.split(" ")[0]
-            receiver = line.split(" ")[1]
-            count = line.split(" ")[2]
-            # print(sender, receiver, count)
-
-            if any(dept in receiver for dept in depts_list):
-                for dept1 in depts_list:
-                    if dept1 in receiver:
-                        if '(' in receiver:
-                            if all(town not in receiver for town in towns_list) and ('서울특별시' in receiver):
-                                print(sender, dept1, count)
-                                filtered_output[(sender, dept1)] = count
-                                total_count += int(count)
-                        else:
-                            print(sender, dept1, count)
-                            filtered_output[(sender, dept1)] = count
-                            total_count += int(count)
-
-        print("total count of filtered docs: " + str(total_count))
-        return filtered_output
-
-class Connection:
-    def __init__(self, doc_idx, sender, receiver):
-        self.doc_idx = doc_idx
-        self.sender = sender
-        self.receiver = receiver
-        self.connections = {}
-
-    # connections = set of Connection instances
-    ### Count edges by senders and receivers and put them in the dictionary
-    def count_connections(self, connections):
-        connection_counter_dict = {}
-        for connection in connections:
-            sender = connection.sender
-            receivers = connection.receiver
-            # If sender and receiver exist
-            if sender and receivers and (receivers != 'No receiver'):
-                # Iterate over all receivers if there are more than two receivers
-                for receiver in receivers.split(","):
-                    # There is same entry that was already inserted in the dictionary,
-                    if (sender, receiver) in connection_counter_dict.keys():
-                        connection_counter_dict[(sender, receiver)] += 1
-                    else:
-                        connection_counter_dict[(sender, receiver)] = 1
-
-        with open("edges_201501.txt", "w") as txt_file:
-            for key, count in connection_counter_dict.items():
-                print(key[0], key[1], count)
-                txt_file.write(key[0] + " " + key[1] + " " + str(count) + "\n")
-
-
-    ### Get all senders and receivers from desirable period of months
-    # input should be two digits of a month (e.g., 01, 03, 10)
-    def get_senders_and_receivers(self, from_month, to_month):
-        conn = sqlite3.connect(DATABASE_NAME)
-        cursor = conn.cursor()
-        connections = []
-
-        # Put together connections of all months
-        for i in range(from_month, to_month+1):
-            # 2d array expected (e.g., [ [sender1, receiver1-1,receiver1-2], [sender2, receiver2], ... ]
-            if i < 10:
-                connections_for_month = cursor.execute("SELECT idx, sender, receiver FROM documents_20150%d" % i)
-            else:
-                connections_for_month = cursor.execute("SELECT idx, sender, receiver FROM documents_2015%d" % i)
-            for connection in connections_for_month:
-                connection = Connection(connection[0], connection[1], connection[2])
-                connections.append(connection)
-
-        conn.commit()
-        conn.close()
-
-        return connections
-
-    def get_senders_and_receivers_for_policy(self):
-        conn = sqlite3.connect(DATABASE_NAME)
-        cursor = conn.cursor()
-        connections = []
-
-        connections_for_month = cursor.execute("SELECT policy_id, doc_id, date, sender, receiver FROM policy_documents")
-
-        for connection in connections_for_month:
-            id = connection[0] + "_" + str(connection[1]) + "_" + connection[2]
-            sender = connection[3]
-            receiver = connection[4]
-            connection = Connection(id, )
-            connections.append(connection)
-
-        conn.commit()
-        conn.close()
-
-        return connections
-
-    def write_connections_to_csv(self, csv_file_name, connections):
-        with open(csv_file_name, 'w') as csvfile:
-            writer = csv.writer(csvfile, delimiter=',')
-            for connection in connections:
-                writer.writerow([connection.doc_idx, connection.sender, connection.receiver])
-
-class Department:
-    def __init__(self, name):
-        self.name = name
-
-    def get_all_departments(self, txt_file_name):
-        txt_file = open(txt_file_name, "r")
-        depts_list = []
-        for line in txt_file.readlines():
-            depts_list.append(line.replace("\n",""))
-            #print(line)
-
-        #print(depts_list)
-        return depts_list
-
-    # List of region names that should be deleted
-    def get_all_towns_in_seoul(self):
-        return ['종로', '용산', '광진', '중랑', '강북', '노원', '서대문', '양천', '구로', '영등포', '관악', '강남', '강동', \
-                '중구', '성동', '동대문', '성북', '도봉', '은평', '마포', '강서', '금천', '동작', '서초', '송파']
-
-    def verify_dep_names(self, connections, depts_list, towns_list):
-        # If there is a match
-        for connection in connections:
-            if (connection.sender in depts_list) and (connection.receiver in depts_list):
-                if '(' in connection.receiver:
-                    for town in towns_list:
-                        if town not in connection.receiver:
-                            print(connection.sender, connection.receiver)
-
-
-    def verify_dep_names_from_txt_file(self, txt_file_name, depts_list, towns_list):
-        print("here")
-        # If there is a match
-        txt_file = open(txt_file_name, "r")
-        filtered_output = {}
-        total_count = 0
-
-        for line in txt_file.readlines():
-            #print line
-            sender = line.split(" ")[0]
-            receiver = line.split(" ")[1]
-            count = line.split(" ")[2]
-            #print(sender, receiver, count)
-
-            if any(dept in receiver for dept in depts_list):
-                for dept1 in depts_list:
-                    if dept1 in receiver:
-                        if '(' in receiver:
-                            if all(town not in receiver for town in towns_list) and ('서울특별시' in receiver):
-                                print(sender, dept1, count)
-                                filtered_output[(sender, dept1)] = count
-                                total_count += int(count)
-                        else:
-                            print(sender, dept1, count)
-                            filtered_output[(sender, dept1)] = count
-                            total_count += int(count)
-
-        print("total count of filtered docs: " + str(total_count))
-        return filtered_output
-
-    def write_csv_for_gephi(self, depts_list, filtered_connections_dict, csv_file_name):
-        with open(csv_file_name, 'w') as csvfile:
-            writer = csv.writer(csvfile, delimiter=',')
-            # Write sender to the first line
-            writer.writerow(["Source", "Target", "Weight"])
-            for key, value in filtered_connections_dict.items():
-                sender = key[0]
-                receiver = key[1]
-                weight = value
-                writer.writerow([sender, receiver, weight])
-
-#############################
-#############################
-#############################
-#############################
-#############################
 
 def Find_hwp_file_name_and_download_hwp(current_month, doc_list, conn):
     # [ 0: doc_id, 1: row_num, 2: date, 3: title, 4: writer, 5: sender_dep, 6: url, 7: url_for_html_file, 8: url_for_hwp_file, 9: hwp_file_name ]
@@ -514,7 +225,7 @@ def Find_hwp_file_name_and_download_hwp_by_policy(policy, policy_documents_url, 
                         # 새 이름을 doc_info[10]에 저장
                         doc.hwp_file_name = new_hwp_file_name
                         # 새 경로를 지정
-                        hwp_file_new_path = "./hwp_files_by_policy/" + new_hwp_file_name
+                        hwp_file_new_path = "./data/hwp_files/hwp_files_by_policy/" + new_hwp_file_name
                         # 기존 이름(previous_hwp_file_name) => 새 이름(new_hwp_file_name)
                         print("New hwp file path is " + hwp_file_new_path)
                         print("Previous hwp file name is " + previous_hwp_file_name)
@@ -576,7 +287,7 @@ def Extract_hwp_sources_and_find_receivers_for_policy(txt_file_name):
 def main():
     option = input("Select menu: ")
     conn = sqlite3.connect("./seoul_documents.db")
-    connection = Connection("", "", "")
+    connection = Connection("", "", "", "")
 
     if option == "1":
         current_month = input("Enter a month (e.g., 201501) : ")
@@ -606,23 +317,63 @@ def main():
 
             Find_hwp_file_name_and_download_hwp(current_month, doc_list, conn)
 
-    if option == "2":
+    if option == '4':
+        connections = connection.get_senders_and_receivers_by_month(1, 1)
+
+    if option == '5':
+        connections = connection.get_senders_and_receivers_by_month(1, 1)
+        connection.count_connections(connections)
+        # for connection in connections:
+        #    print(connection.sender, connection.receiver)
+
+    if option == '6':
+        # Write csv file
+        connection.write_connections_to_csv("connections.csv", connections)
+
+    if option == '7':
+        # argument: idx, work_category, title, sender, receiver
+        document = Document("", "", "", "", "")
+        documents = document.get_doc_info(1, 1)
+        document.write_results_to_txt("doc_info_201501.txt", documents)
+
+    if option == '8':
+        department = Department("")
+        depts_list = department.get_all_departments("seoul_departments.txt")
+        towns_list = department.get_all_towns_in_seoul()
+        connections = connection.get_senders_and_receivers_by_month(1, 1)
+        counted_connections = connection.count_connections(connections)
+        filtered_connections_dict = department.verify_dep_names_from_txt_file("edges_201501.txt", depts_list,
+                                                                              towns_list)
+        department.write_csv_for_gephi(depts_list, filtered_connections_dict, "edges_list_201501.csv")
+
+    if option == '9':
+        document = Document()
+        document.count_documents_by_condition()
+
+
+##### From here #######
+### 정책관련문서 메뉴들 ###
+#######################
+
+    if option == "11":
         for i in range(18):
-            response = requests.get("http://opengov.seoul.go.kr/policy?field_policy_year_value=All&search=&items_per_page=15&page=%d&policy_year=All&policy_done=All" % i)
+            response = requests.get(
+                "http://opengov.seoul.go.kr/policy?field_policy_year_value=All&search=&items_per_page=15&page=%d&policy_year=All&policy_done=All" % i)
 
             cursor = conn.cursor()
             cursor2 = conn.cursor()
 
             # 이미 저장된 정책들은 다시 방문하지 않는다
             cursor.execute("select policy_id, doc_id from policy_documents")
-            completed_policy_ids = [result[0] for result in set(list(cursor.fetchall())) if result[1] == 1] # 정책문서의 끝까지 다 저장된 경우만 따진다
+            completed_policy_ids = [result[0] for result in set(list(cursor.fetchall())) if
+                                    result[1] == 1]  # 정책문서의 끝까지 다 저장된 경우만 따진다
             print(completed_policy_ids)
 
-            policy_urls = re.findall('\/policy\/project\/[0-9]+', response.content.decode()) # 정책 url
+            policy_urls = re.findall('\/policy\/project\/[0-9]+', response.content.decode())  # 정책 url
             policy_urls = set(policy_urls)
             # 정책 리스트 한 페이지 내에 있는 정책 loop
             for policy_url in policy_urls:
-                response2 = requests.get("http://opengov.seoul.go.kr" + policy_url) # Project information page
+                response2 = requests.get("http://opengov.seoul.go.kr" + policy_url)  # Project information page
                 response2_content = response2.content.decode().replace('\n', '').replace('\t', '')
 
                 policy = Policy("", "", "", "", "", "", "", "")
@@ -642,17 +393,19 @@ def main():
                 else:
                     policy.is_public = 0
 
-                print(policy.id, policy.title, policy.area, policy.period, policy.is_public, policy.department, policy.writer)
+                print(policy.id, policy.title, policy.area, policy.period, policy.is_public, policy.department,
+                      policy.writer)
 
-                #policy.insert_policy_info_to_DB(cursor)
+                # policy.insert_policy_info_to_DB(cursor)
 
-                if policy.id not in completed_policy_ids:
-                    policy_documents_url = re.findall('\/policy\/list\/[0-9]+', response2_content)[0] # document list page for policy
-                    Find_hwp_file_name_and_download_hwp_by_policy(policy, policy_documents_url, conn)
+                #if policy.id not in completed_policy_ids:
+                policy_documents_url = re.findall('\/policy\/list\/[0-9]+', response2_content)[
+                        0]  # document list page for policy
+                Find_hwp_file_name_and_download_hwp_by_policy(policy, policy_documents_url, conn)
 
             conn.commit()
 
-    if option == '3':
+    if option == '12':
         cursor2 = conn.cursor()
         # Open text files and extract receivers from hwp codes
         # Get receivers and write them to excel file
@@ -666,47 +419,53 @@ def main():
         conn.commit()
         conn.close()
 
-    if option == '4':
-        connections = connection.get_senders_and_receivers(1, 1)
-
-    if option == '5':
-        connections = connection.get_senders_and_receivers(1, 1)
-        connection.count_connections(connections)
-        # for connection in connections:
-        #    print(connection.sender, connection.receiver)
-
-    if option == '6':
-        # Write csv file
-        connection.write_connections_to_csv("connections.csv", connections)
-
-    if option == '7':
-        # argument: idx, work_category, title, sender, receiver
-        document = Document("", "", "", "", "")
-        documents = document.get_doc_info(1, 1)
-        document.write_results_to_txt("doc_info_201501.txt", documents)
-
-    if option == '8':
+    if option == '13':
         department = Department("")
-        depts_list = department.get_all_departments("seoul_departments.txt")
+        depts_list = department.get_all_departments("./data/seoul_departments.txt")
         towns_list = department.get_all_towns_in_seoul()
-        connections = connection.get_senders_and_receivers(1, 1)
-        counted_connections = connection.count_connections(connections)
-        filtered_connections_dict = department.verify_dep_names_from_txt_file("edges_201501.txt", depts_list,
+        connections = connection.get_senders_and_receivers_by_policy_and_date()
+        connection.count_connections(connections)
+
+        filtered_connections_dict = department.verify_dep_names_from_txt_file_by_policy_and_date("./data/edges_for_policy.txt", depts_list,
                                                                               towns_list)
-        department.write_csv_for_gephi(depts_list, filtered_connections_dict, "edges_list_201501.csv")
+        department.write_csv_for_gephi(depts_list, filtered_connections_dict, "./data/edges_list_for_policy.csv")
 
-    if option == '9':
-        document = Document()
-        document.count_documents_by_condition()
-
-    if option == '10':
-        connections = connection.get_senders_and_receivers(1, 1)
-
-    if option == '11':
-        connections = connection.get_senders_and_receivers(1, 1)
+    if option == '14':
+        connections = connection.get_senders_and_receivers_by_month(1, 1)
         connection.count_connections(connections)
         # for connection in connections:
         #    print(connection.sender, connection.receiver)
+
+
+    if option == '31':
+        department = Department("")
+        depts_list = department.get_all_departments("./data/seoul_departments.txt")
+        towns_list = department.get_all_towns_in_seoul()
+        connections = connection.get_senders_and_receivers()
+        edges_dict = connection.count_connections_by_policy_and_date(connections)
+
+        filtered_edges_dict = department.verify_dep_names_by_policy_and_date(edges_dict, depts_list,
+            towns_list)
+
+        for key1, edges in filtered_edges_dict.items():
+            policy_id = key1[0]
+            month = key1[1]
+            network = None
+            network = Network(edges)
+            network.make_graph(policy_id, month)
+
+            #for edge, count in edges.items():
+            #    sender = edge[0]
+            #    receiver = edge[1]
+            #    print(policy_id, month, sender, receiver, count)
+
+        #edges = [ (10,13), (11,13), (13,2), (2,10) ]
+        #edges2 = [(10, 3), (11, 13), (13, 2), (19, 10)]
+
+
+
+
+
 
 def menu():
 
@@ -720,10 +479,12 @@ def menu():
         "\t 8. 서울시 내부부서만 가려내서 출력하기\n"
         "\t 9. 조건에 맞는 문서개수 파악하기\n"
         "그룹 2. 정책관련문서 크롤링 \n" \
-        "\t 2. 정책관련문서 크롤링 : \n" \
-        "\t 3. 정책관련문서 수신자정보 추출 \n" \
-        "\t 10. DB로부터 송수신자 받아서 출력하기\n" \
-        "\t 11. 송수신자 종류별로 주고받은 문서개수 세고 딕셔너리에 저장하기\n" \
+        "\t 11. 정책관련문서 크롤링 : \n" \
+        "\t 12. 정책관련문서 수신자정보 추출 \n" \
+        "\t 13. DB로부터 송수신자 받고 -> 외부기관 제외 & 송수신자 일대일로 처리\n" \
+        "\t 14. 송수신자 종류별로 주고받은 문서개수 세고 딕셔너리에 저장하기\n" \
+        "그룹 3. 네트워크 시각화 \n" \
+        "\t 31. 정책문서 시각화 \n" \
         )
 
 main()
