@@ -498,7 +498,6 @@ def main():
         policy_doc = PolicyDocument("", "", "", "", "", "", "", "", "", "", "", "", "")
         keywords = "노들섬"
 
-        # 일단 loop over policies
         cursor = conn.cursor()
         cursor.execute("select * from policy")
 
