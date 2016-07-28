@@ -1,5 +1,6 @@
 import sqlite3
 import csv
+DATABASE_NAME = './seoul_documents.db'
 
 class Document:
     def __init__(self, doc_id, idx, date, title, writer, work_category, sender, receiver, url, url_for_html_file, url_for_hwp_file, hwp_file_name):
@@ -17,10 +18,6 @@ class Document:
         self.hwp_file_name = hwp_file_name
 
     def filter_and_insert_doc_info_to_DB(self, doc_info):
-
-        # dictonary for every loop
-        #print(doc_info)
-
         useless_work_cards = [u'예산집행및회계관리', u'복무관리', u'공무직관리', u'관용차량관리', u'인사관리', u'급여및수당관리', u'교육훈련관리']
         useless_title_words = [u'일지', u'휴가']
 
@@ -75,6 +72,19 @@ class Document:
         conn.close()
 
         return documents
+
+    def get_doc_info_by_policy_keywords(self, policy_id, policy_period, keywords):
+        conn = sqlite3.connect(DATABASE_NAME)
+        cursor = conn.cursor()
+
+        for i in range(1, 13):
+            if i < 10:
+                results = cursor.execute("select * from documents_20150%d where title LIKE ?" % i, ('%'+keywords+'%',))
+            else:
+                results = cursor.execute("select * from documents_2015%d where title LIKE ?" % i,
+                                         ('%' + keywords + '%',))
+            for result in results:
+                print(result)
 
     def write_results_to_txt(self, txt_file_name, documents):
         with open(txt_file_name, 'w') as txtfile:

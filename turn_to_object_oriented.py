@@ -26,7 +26,12 @@ def Find_hwp_file_name_and_download_hwp(current_month, doc_list, conn):
     #url = 'http://opengov.seoul.go.kr/sanction/8502402'
     print("start requesting original url")
     #session = FuturesSession()
-    responses = (grequests.get(doc.url) for doc in doc_list)
+    responses = (grequests.get("http://opengov.seoul.go.kr.prx2.unblocksites.co" + doc.url.replace("http://opengov.seoul.go.kr", "")) for doc in doc_list)
+    print("http://opengov.seoul.go.kr.prx2.unblocksites.co" + doc_list[0].url.replace("http://opengov.seoul.go.kr", ""))
+    print("http://opengov.seoul.go.kr.prx2.unblocksites.co" + doc_list[1].url.replace("http://opengov.seoul.go.kr", ""))
+    print("http://opengov.seoul.go.kr.prx2.unblocksites.co" + doc_list[2].url.replace("http://opengov.seoul.go.kr", ""))
+    print("http://opengov.seoul.go.kr.prx2.unblocksites.co" + doc_list[3].url.replace("http://opengov.seoul.go.kr", ""))
+
 
     # Cursor for DB
     cursor1 = conn.cursor()
@@ -37,29 +42,26 @@ def Find_hwp_file_name_and_download_hwp(current_month, doc_list, conn):
             file_name = re.findall('fid=(.*?)"', response.content.decode("utf-8"))
             # 엑셀문서에 나와있는 날짜가 틀린 경우가 있다. 이런 경우 날짜를 직접 문서상에서 찾아줘야 한다.....
             date_in_doc = re.findall(r'2F[0-9]{8}', response.content.decode("utf-8"))
-            url_for_html_file = 'http://opengov.seoul.go.kr/synap/output' + '/' + ''.join(file_name) + '.view.xhtml'
+            url_for_html_file = 'http://opengov.seoul.go.kr.prx2.unblocksites.co/synap/output' + '/' + ''.join(file_name) + '.view.xhtml'
             hwp_file_name = ''.join(file_name) + ".hwp"
             #print("hwp_file_name here: " + hwp_file_name)
             # 그마저도 문서 상에 날짜가 없는 경우에는.. 무시해버린다
             if not date_in_doc:
                 date_in_doc.append("0")
-            url_for_hwp_file = "http://opengov.seoul.go.kr/sites/all/blocks/download.php?uri=%2Fdcdata%2F100001%" + date_in_doc[0] + "%2F" + hwp_file_name
+            url_for_hwp_file = "http://opengov.seoul.go.kr.prx2.unblocksites.co/sites/all/blocks/download.php?uri=%2Fdcdata%2F100001%" + date_in_doc[0] + "%2F" + hwp_file_name
             #print("url_hwp_file_name here: " + url_for_hwp_file)
 
             url_name = ''.join(re.findall(r'&url=(.*?)\'', response.content.decode("utf-8")))
 
             for doc in doc_list:
-                print("doc_value[6] is " + str(doc.url))
-                print("url name is " + url_name)
                 if str(doc.url) == url_name:
                     doc.url_for_html_file = url_for_html_file
                     doc.url_for_hwp_file = url_for_hwp_file
-                    print(url_for_hwp_file)
+                    print("url_for_hwp_file is " + url_for_hwp_file)
                     doc.hwp_file_name = hwp_file_name
                     cursor1.execute('update documents_%s SET url_for_html_file=?, url_for_hwp_file=?, hwp_file_name=? \
                                                     where idx=?' % current_month, (doc.url_for_html_file, doc.url_for_hwp_file, doc.hwp_file_name, doc.idx))
                 conn.commit()
-
 
     print("# of hwp files that will be downloaded: " + str(len(doc_list)))
     max_index = 0
@@ -87,7 +89,7 @@ def Find_hwp_file_name_and_download_hwp(current_month, doc_list, conn):
                 # 새 이름을 doc_info[10]에 저장
                 doc.hwp_file_name = new_hwp_file_name
                 # 새 경로를 지정
-                hwp_file_new_path = "./hwp_files_%s/" % current_month + new_hwp_file_name
+                hwp_file_new_path = "./data/hwp_files/hwp_files_%s/" % current_month + new_hwp_file_name
                 # 기존 이름(previous_hwp_file_name) => 새 이름(new_hwp_file_name)
                 print("New hwp file path is " + hwp_file_new_path)
                 print("Previous hwp file name is " + previous_hwp_file_name)
@@ -316,6 +318,76 @@ def main():
             start_idx = end_idx
 
             Find_hwp_file_name_and_download_hwp(current_month, doc_list, conn)
+    if option == '2':
+        current_month = input("Enter a month (e.g., 201501, or \'by_policy\' for policy) : ")
+        start = int(input("Enter the start index : "))
+
+        start = 20000
+        end = 0
+        range_idx = 30
+
+        # node script를 통해 hwp파일을 txt파일로 변환한다
+        for i in range(1, 2000):
+            end = start + range_idx
+            print("End index is " + str(end))
+            os.system("INDEX1=%s INDEX2=%d INDEX3=%d node ./node_hwp_test/test.js" % (201509, start, end))
+            start = end
+
+        start = 0
+        end = 0
+        range_idx = 30
+
+        # node script를 통해 hwp파일을 txt파일로 변환한다
+        for i in range(1, 2200):
+            end = start + range_idx
+            print("End index is " + str(end))
+            os.system("INDEX1=%s INDEX2=%d INDEX3=%d node ./node_hwp_test/test8.js" % (201511, start, end))
+            start = end
+
+        start = 0
+        end = 0
+        range_idx = 30
+
+        # node script를 통해 hwp파일을 txt파일로 변환한다
+        for i in range(1, 2200):
+            end = start + range_idx
+            print("End index is " + str(end))
+            os.system("INDEX1=%s INDEX2=%d INDEX3=%d node ./node_hwp_test/test8.js" % (201512, start, end))
+            start = end
+
+        start = 0
+        end = 0
+        range_idx = 30
+
+        # node script를 통해 hwp파일을 txt파일로 변환한다
+        for i in range(1, 2200):
+            end = start + range_idx
+            print("End index is " + str(end))
+            os.system("INDEX1=%s INDEX2=%d INDEX3=%d node ./node_hwp_test/test8.js" % (201601, start, end))
+            start = end
+
+        start = 0
+        end = 0
+        range_idx = 30
+
+        # node script를 통해 hwp파일을 txt파일로 변환한다
+        for i in range(1, 2200):
+            end = start + range_idx
+            print("End index is " + str(end))
+            os.system("INDEX1=%s INDEX2=%d INDEX3=%d node ./node_hwp_test/test8.js" % (201602, start, end))
+            start = end
+
+        start = 0
+        end = 0
+        range_idx = 30
+
+        # node script를 통해 hwp파일을 txt파일로 변환한다
+        for i in range(1, 2200):
+            end = start + range_idx
+            print("End index is " + str(end))
+            os.system("INDEX1=%s INDEX2=%d INDEX3=%d node ./node_hwp_test/test8.js" % (201603, start, end))
+            start = end
+
 
     if option == '4':
         connections = connection.get_senders_and_receivers_by_month(1, 1)
@@ -358,7 +430,7 @@ def main():
     if option == "11":
         for i in range(18):
             response = requests.get(
-                "http://opengov.seoul.go.kr/policy?field_policy_year_value=All&search=&items_per_page=15&page=%d&policy_year=All&policy_done=All" % i)
+                "http://opengov.seoul.go.kr.prx2.unblocksites.co/policy?field_policy_year_value=All&search=&items_per_page=15&page=%d&policy_year=All&policy_done=All" % i)
 
             cursor = conn.cursor()
             cursor2 = conn.cursor()
@@ -376,7 +448,7 @@ def main():
                 response2 = requests.get("http://opengov.seoul.go.kr" + policy_url)  # Project information page
                 response2_content = response2.content.decode().replace('\n', '').replace('\t', '')
 
-                policy = Policy("", "", "", "", "", "", "", "")
+                policy = Policy("", "", "", "", "", "", "", "", "")
 
                 print("Starting this policy url: " + "http://opengov.seoul.go.kr" + policy_url)
                 policy.id = re.findall('(?:사업번호</th><td>)([0-9-]+)(?:<)', response2_content)[0]
@@ -420,6 +492,39 @@ def main():
         conn.close()
 
     if option == '13':
+        ### 예시 2015-29, 2015-34
+        doc = Document("", "", "", "", "", "", "", "", "", "", "", "")
+        policy = Policy("", "", "", "", "", "", "", "", "")
+        policy_doc = PolicyDocument("", "", "", "", "", "", "", "", "", "", "", "", "")
+        keywords = "노들섬"
+
+        # 일단 loop over policies
+        cursor = conn.cursor()
+        cursor.execute("select * from policy")
+
+        policies = []
+        policy_2015_29 = Policy("", "", "", "", "", "", "", "", "")
+        policy_2015_34 = Policy("", "", "", "", "", "", "", "", "")
+        policies.append(policy_2015_29)
+        policies.append(policy_2015_34)
+        policies[0].id = "2015-29"
+        policies[1].id = "2015-34"
+
+        policies[0].period = "2014.5 - 2015.12"
+        policies[1].period = "2014.10 - 2018.01"
+
+        policies[0].keywords = keywords
+
+        #for policy in policies:
+        # 정책기간 내 문서들만 검색
+        # 여러 세트의 키워드를 넘긴다
+        doc.get_doc_info_by_policy_keywords(policies[0].id, policies[0].period, policies[0].keywords)
+
+
+        #policy_doc.insert_relevant_doc_info_by_policy()
+
+
+    if option == '14':
         department = Department("")
         depts_list = department.get_all_departments("./data/seoul_departments.txt")
         towns_list = department.get_all_towns_in_seoul()
@@ -430,7 +535,7 @@ def main():
                                                                               towns_list)
         department.write_csv_for_gephi(depts_list, filtered_connections_dict, "./data/edges_list_for_policy.csv")
 
-    if option == '14':
+    if option == '15':
         connections = connection.get_senders_and_receivers_by_month(1, 1)
         connection.count_connections(connections)
 
@@ -451,24 +556,82 @@ def main():
             network = Network(edges)
             network.make_graph(policy_id, month)
 
+    if option == '41':
+        for i in range(18):
+            response = requests.get(
+                "http://opengov.seoul.go.kr/policy?field_policy_year_value=All&search=&items_per_page=15&page=%d&policy_year=All&policy_done=All" % i)
+
+            cursor = conn.cursor()
+
+            # 이미 저장된 정책들은 다시 방문하지 않는다
+            cursor.execute("select policy_id from policy")
+            completed_policy_ids = [result[0] for result in set(list(cursor.fetchall()))]  # 정책문서의 끝까지 다 저장된 경우만 따진다
+            print(completed_policy_ids)
+
+            policy_urls = re.findall('\/policy\/project\/[0-9]+', response.content.decode())  # 정책 url
+            policy_urls = set(policy_urls)
+            # 정책 리스트 한 페이지 내에 있는 정책 loop
+            for policy_url in policy_urls:
+                response2 = requests.get("http://opengov.seoul.go.kr" + policy_url)  # Project information page
+                response2_content = response2.content.decode().replace('\n', '').replace('\t', '')
+
+                policy = Policy("", "", "", "", "", "", "", "", "")
+
+                print("Starting this policy url: " + "http://opengov.seoul.go.kr" + policy_url)
+                policy.id = re.findall('(?:사업번호</th><td>)([0-9-]+)(?:<)', response2_content)[0]
+                policy.title = re.findall('(?:정책명</th><td>)(.*?)(?:<)', response2_content)[0]
+                print("policy title is " + ''.join(policy.title))
+                policy.area = re.findall('(?:분야</th><td>)(.*?)(?:<)', response2_content)[0]
+                policy.period = re.findall('(?:기간</th><td>)(.*?)(?:<)', response2_content)[0]
+                policy.is_public = re.findall('(?:공개구분</th><td>)(.*?)(?:<)', response2_content)[0]
+                policy.department = re.findall('(?:담당부서</th><td>)(.*?)(?:<)', response2_content)[0]
+                policy.writer = re.findall('(?:담당자</th><td>)(.*?)(?:<)', response2_content)[0]
+                policy.budget = re.findall('(?:소요예산</th><td>)(.*?)(?:<)', response2_content)[0]
+
+                if policy.is_public == '공개':
+                    policy.is_public = 1
+                else:
+                    policy.is_public = 0
+
+                print(policy.id, policy.title, policy.area, policy.period, policy.is_public, policy.department,
+                      policy.writer, policy.budget)
+
+                policy.insert_policy_info_to_DB(cursor)
+
+            conn.commit()
+        conn.close()
+
+    if option == '99':
+        doc_url = "http://opengov.seoul.go.kr/sanction/9176301"
+        str_1 = "http://opengov.seoul.go.kr" + doc_url.replace("http://opengov.seoul.go.kr", "")
+        print(str_1)
+
 def menu():
 
     print(
         "그룹 1. 일반문서 크롤링 \n" \
         "\t 1. 일반문서 크롤링 : 원하는 기간 선택, DB에 정보 저장, 한글파일 다운로드 \n" \
+        "\t 2. txt 파일로 변환 \n" \
         "\t 4. DB로부터 송수신자 받아서 출력하기\n" \
         "\t 5. 송수신자 종류별로 주고받은 문서개수 세고 딕셔너리에 저장하기\n" \
         "\t 6. 송수신자 정보 csv에 출력하기\n" \
         "\t 7. 문서 정보 txt에 출력하기\n" \
         "\t 8. 서울시 내부부서만 가려내서 출력하기\n"
         "\t 9. 조건에 맞는 문서개수 파악하기\n"
+
         "그룹 2. 정책관련문서 크롤링 \n" \
         "\t 11. 정책관련문서 크롤링 : \n" \
         "\t 12. 정책관련문서 수신자정보 추출 \n" \
-        "\t 13. DB로부터 송수신자 받고 -> 외부기관 제외 & 송수신자 일대일로 처리\n" \
-        "\t 14. 송수신자 종류별로 주고받은 문서개수 세고 딕셔너리에 저장하기\n" \
+        "\t 13. 일반문서로부터 정책키워드로 정책과 관련된 일반문서 가져오기 \n" \
+        "\t 14. DB로부터 송수신자 받고 -> 외부기관 제외 & 송수신자 일대일로 처리\n" \
+        "\t 15. 송수신자 종류별로 주고받은 문서개수 세고 딕셔너리에 저장하기\n" \
+
         "그룹 3. 네트워크 시각화 \n" \
         "\t 31. 정책문서 시각화 \n" \
+
+        "그룹 4. DB queries \n" \
+        "\t 41. Insert: 정책 데이터 저장 \n" \
+        "\t 41. Select: 일반문서 데이터를 정책 키워드로 검색하여 정책관련문서 추리기 \n" \
         )
 
 main()

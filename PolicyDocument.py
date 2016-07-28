@@ -6,3 +6,6 @@ class PolicyDocument(Document):
         self.policy_id = policy_id
         self.policy_title = policy_title
         self.is_public = is_public
+
+    def insert_relevant_doc_info_by_policy(self):
+        pass
