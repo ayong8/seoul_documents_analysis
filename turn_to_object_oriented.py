@@ -3,6 +3,7 @@
 import csv
 import glob
 import os
+import shutil
 import sqlite3
 import grequests
 import re
@@ -13,7 +14,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 
 from Policy import Policy
-from Document import Document
+import Document
 from PolicyDocument import PolicyDocument
 from Department import Department
 from Network import Network
@@ -278,16 +279,16 @@ def Find_hwp_file_name_and_download_hwp_by_search_for_policy(policy, conn):
                 for doc_id, title, url, date, is_public in zip(doc_ids, titles, document_urls, dates, is_publics):
                     print('{} {} {}'.format(doc_id, title, url, date, is_public))
                     url = "http://opengov.seoul.go.kr" + url
-                    doc = PolicyDocument("", "", "", "", "", "", "", "", "", "", "", "", "")
-                    doc.policy_id = policy.id
-                    doc.doc_id = doc_id
-                    doc.title = title
-                    doc.policy_title = policy.title
-                    doc.date = date
-                    doc.url = url
-                    doc.is_public = is_public
-                    doc_list.append(doc)
-                    print(doc.doc_id, doc.policy_id, doc.url)
+                    policy_doc = PolicyDocument("", "", "", "", "", "", "", "", "", "", "", "", "")
+                    policy_doc.policy_id = policy.id
+                    policy_doc.doc_id = int(doc_id) + 10000  # 검색에 의한 문서들은 10000번대부터 시작
+                    policy_doc.title = title
+                    policy_doc.policy_title = policy.title
+                    policy_doc.date = date
+                    policy_doc.url = url
+                    policy_doc.is_public = is_public
+                    doc_list.append(policy_doc)
+                    print(policy_doc.doc_id, policy_doc.policy_id, policy_doc.url)
 
                 print(doc_list)
 
@@ -321,19 +322,15 @@ def Find_hwp_file_name_and_download_hwp_by_search_for_policy(policy, conn):
                         url_name = re.findall('(http:\/\/opengov.seoul.go.kr\/sanction\/[0-9]+)', response_content)[0]
 
                         # Get information from the table in the webpage
-                        for doc in doc_list:
-                            if doc.url == url_name:
-                                doc.writer = re.findall('(?<="accountablePerson">)(.*?)(?=<\/td>)', response_content)[0]
-                                doc.sender = re.findall('(?<="contributor">)([^0-9].*?)(?:<)', response_content)[0]
-                                doc.url_for_html_file = url_for_html_file
-                                doc.url_for_hwp_file = url_for_hwp_file
-                                doc.hwp_file_name = hwp_file_name
+                        for policy_doc in doc_list:
+                            if policy_doc.url == url_name:
+                                policy_doc.writer = re.findall('(?<="accountablePerson">)(.*?)(?=<\/td>)', response_content)[0]
+                                policy_doc.sender = re.findall('(?<="contributor">)([^0-9].*?)(?:<)', response_content)[0]
+                                policy_doc.url_for_html_file = url_for_html_file
+                                policy_doc.url_for_hwp_file = url_for_hwp_file
+                                policy_doc.hwp_file_name = hwp_file_name
 
-                                cursor1.execute('INSERT OR REPLACE INTO policy_documents (policy_id, doc_id, title, policy_title, sender, date, writer, \
-                                                                url, is_public) \
-                                                                values(?,?,?,?,?,?,?,?,?);', (doc.policy_id, doc.doc_id, doc.title, doc.policy_title, doc.sender, doc.date, \
-                                                                                  doc.writer, doc.url, doc.is_public))
-
+                                policy_doc.insert_relevant_doc_info_by_policy(cursor1)
                                 break
 
                 conn.commit()
@@ -357,18 +354,18 @@ def Find_hwp_file_name_and_download_hwp_by_search_for_policy(policy, conn):
                             ### hwp 파일명을 기존 파일명에서 [날짜]_[id] 로 바꾼다
 
                             previous_hwp_file_name = doc.hwp_file_name
-                            new_hwp_file_name = str(doc.policy_id) + "_s" + str(doc.doc_id) + "_" + str(doc.date.replace('-','')) + ".hwp"
+                            new_hwp_file_name = str(doc.policy_id) + "_" + str(doc.doc_id) + "_" + str(doc.date.replace('-','')) + ".hwp"
                             # 새 이름을 doc_info[10]에 저장
                             doc.hwp_file_name = new_hwp_file_name
                             # 새 경로를 지정
-                            hwp_file_new_path = "./data/hwp_files/hwp_files_by_policy/" + new_hwp_file_name
+                            hwp_file_new_path = "/Volumes/Backup/data/hwp_files/hwp_files_by_policy/" + new_hwp_file_name
                             # 기존 이름(previous_hwp_file_name) => 새 이름(new_hwp_file_name)
                             print("New hwp file path is " + hwp_file_new_path)
                             print("Previous hwp file name is " + previous_hwp_file_name)
                             # hwp 파일이름을 바꾼다
                             # hwp파일이 전송된 것이 있을 경우에만 파일이름을 바꾼다
                             if previous_hwp_file_name:
-                                os.rename(previous_hwp_file_name, hwp_file_new_path)
+                                shutil.move(previous_hwp_file_name, hwp_file_new_path)
                             print("FINISH downloading " + doc.url_for_hwp_file)
                             response2.connection.close()
                         except requests.exceptions.ConnectionError as e:
@@ -492,7 +489,7 @@ def main():
             for doc_idx, doc_info in enumerate(rows):
                 if start_idx < doc_idx <= end_idx:
                     #print(doc_info[6])
-                    doc = Document("", "", "", "", "", "", "", "", "", "", "", "")
+                    doc = Document.Document("", "", "", "", "", "", "", "", "", "", "", "")
                     doc.filter_and_insert_doc_info_to_DB(doc_info)
                     doc_list.append(doc)
 
@@ -528,7 +525,7 @@ def main():
 
     if option == '7':
         # argument: idx, work_category, title, sender, receiver
-        document = Document("", "", "", "", "")
+        document = Document.Document("", "", "", "", "")
         documents = document.get_doc_info(1, 1)
         document.write_results_to_txt("doc_info_201501.txt", documents)
 
@@ -543,7 +540,7 @@ def main():
         department.write_csv_for_gephi(depts_list, filtered_connections_dict, "edges_list_201501.csv")
 
     if option == '9':
-        document = Document()
+        document = Document.Document()
         document.count_documents_by_condition()
 
 
@@ -633,35 +630,37 @@ def main():
 
     ### 31. 일반문서로부터 정책키워드로 정책과 관련된 일반문서 가져오기
     if option == '31':
-        doc = Document("", "", "", "", "", "", "", "", "", "", "", "")
+        doc = Document.Document("", "", "", "", "", "", "", "", "", "", "", "")
         policy_doc = PolicyDocument("", "", "", "", "", "", "", "", "", "", "", "", "")
 
         cursor = conn.cursor()
+        cursor2 = conn.cursor()
         cursor.row_factory = sqlite3.Row
+        cursor2.row_factory = sqlite3.Row
         cursor.execute("select * from policy")
+
         policies = []
 
         for row in cursor:
             policy = Policy("", "", "", "", "", "", "", "", "", "")
             # 정책객체 초기화
             policy.id = row["id"]
+            policy.title = row["title"]
+            print("Current policy is " + policy.id)
             policy.date = Date("", "")
-            policies.append(policy)
-            ### 각 정책별로 처리..
+            policy.keyword = row["keyword"]
+            policy.date = Date("", "")
+            print("Policy period is " + row["period"])
+            (policy.date.from_date, policy.date.to_date) = policy.date.format_date(row["period"])
+            policy.date.from_date = policy.date.set_range_of_from_date(policy.date.from_date, "2015-01-01", "2016-04-30")
+            policy.date.to_date = policy.date.set_range_of_to_date(policy.date.to_date, "2015-01-01", "2016-04-30")
+            print("Updated Policy period is " + policy.date.from_date + ", " + policy.date.to_date)
 
-        # for policy in policies:
-        # Go over documents from the policy period
-        # 정책마다 날짜 포맷이 다르므로 각기 다르게 대응
+            # 정책기간이 2015.1.1 ~ 2016.4.30에서 벗어나면 분석하지 않는다
+            if (policy.date.from_date != "Invalid") and (policy.date.to_date != "Invalid"):
+                doc.get_doc_info_by_policy_keywords(policy, conn)
 
-        # 여러 세트의 키워드를 넘긴다
-
-        #policies[0].keywords = keywords
-
-        doc.get_doc_info_by_policy_keywords(policies[0].id, policies[0].period, policies[0].keywords)
-
-
-        # policy_doc.insert_relevant_doc_info_by_policy()
-
+    # 32. 서울시 홈페이지 검색을 통해 정책관련문서 검색하기
     if option == '32':
         cursor = conn.cursor()
         cursor.row_factory = sqlite3.Row
@@ -672,9 +671,12 @@ def main():
             # 정책객체 초기화
             policy.id = row["id"]
             policy.keyword = row["keyword"]
+            policy.title = row["title"]
             policy.date = Date("", "")
             (policy.date.from_date, policy.date.to_date) = policy.date.format_date(row["period"])
-            print(policy.date.from_date, policy.date.to_date)
+            policy.date.from_date = policy.date.set_range_of_from_date(policy.date.from_date, "2011-01-01", "2016-07-31")
+            policy.date.to_date = policy.date.set_range_of_to_date(policy.date.to_date, "2011-01-01", "2016-07-31")
+            print("Updated Policy period is " + policy.date.from_date + ", " + policy.date.to_date)
 
             Find_hwp_file_name_and_download_hwp_by_search_for_policy(policy, conn)
 

@@ -1,5 +1,11 @@
 import sqlite3
 import csv
+import re
+import os
+from datetime import datetime
+import pandas as pd
+
+
 DATABASE_NAME = './seoul_documents.db'
 
 class Document:
@@ -73,18 +79,74 @@ class Document:
 
         return documents
 
-    def get_doc_info_by_policy_keywords(self, policy_id, policy_period, keywords):
-        conn = sqlite3.connect(DATABASE_NAME)
-        cursor = conn.cursor()
+    def get_doc_info_by_policy_keywords(self, policy, conn):
+        import PolicyDocument
 
-        for i in range(1, 13):
-            if i < 10:
-                results = cursor.execute("select * from documents_20150%d where title LIKE ?" % i, ('%'+keywords+'%',))
-            else:
-                results = cursor.execute("select * from documents_2015%d where title LIKE ?" % i,
-                                         ('%' + keywords + '%',))
-            for result in results:
-                print(result)
+        cursor = conn.cursor()
+        cursor2 = conn.cursor()
+        cursor.row_factory = sqlite3.Row
+        cursor2.row_factory = sqlite3.Row
+
+        from_date = datetime(int(policy.date.from_date.split('-')[0]), int(policy.date.from_date.split('-')[1]), int(policy.date.from_date.split('-')[2]))
+        to_date = datetime(int(policy.date.to_date.split('-')[0]), int(policy.date.to_date.split('-')[1]), int(policy.date.to_date.split('-')[2]))
+
+        date_dict = pd.DataFrame(pd.date_range(from_date, to_date, freq='M'))
+
+        for keyword in policy.keyword.split(","):
+            query_for_keywords = ""
+            tokens = []
+            print("whole keyword: " + keyword)
+            for idx, keyword_token in enumerate(keyword.split("+")):
+                if idx == 0:
+                    query_for_keywords += "title LIKE ?"
+                else:
+                    query_for_keywords += "and title LIKE ?"
+                tokens.append(keyword_token.replace("\n", ""))
+            # 키워드가 없다면 해당 키워드에 대해 아래 코드를 실행하지 않는다
+            if not tokens:
+                continue
+            print("split keyword by +: " + ''.join(tokens))
+            for idx, date in date_dict.items():
+                months = [month.replace('-', '') for month in re.findall('[0-9]{4}-[0-9]{2}', str(date))]
+                for current_month in months:
+                    query = "select * from documents_" + current_month + " where " + query_for_keywords + "COLLATE NOCASE" # Case-insensitive
+                    params = tuple(tokens)
+                    print("current month: " + current_month)
+                    if len(tokens) == 1:
+                        results = cursor.execute(query, ['%'+tokens[0]+'%'])
+                    if len(tokens) == 2:
+                        results = cursor.execute(query, ['%'+tokens[0]+'%','%'+tokens[1]+'%'])
+                    if len(tokens) == 3:
+                        results = cursor.execute(query, ['%'+tokens[0]+'%', '%'+tokens[1]+'%', '%'+tokens[2]+'%'])
+                    #existing_policy_docs = policy_doc.get_policy_urls_by_policy_id()
+                    for result in results:
+                        policy_doc = PolicyDocument.PolicyDocument("","","","","","","","","","","","","")
+                        policy_doc.policy_id = policy.id
+                        policy_doc.policy_title = policy.title
+                        policy_doc.doc_id = result["doc_id"]
+                        policy_doc.title = result["title"]
+                        policy_doc.date = result["date"]
+                        policy_doc.sender = result["sender"]
+                        policy_doc.receiver = ""
+                        policy_doc.writer = result["writer"]
+                        policy_doc.url = result["url"]
+                        policy_doc.url_for_html_file = result["url_for_html_file"]
+                        policy_doc.url_for_hwp_file = result["url_for_hwp_file"]
+                        policy_doc.hwp_file_name = result["hwp_file_name"]
+                        policy_doc.is_public = result["public"]
+
+                        # DB에 넣고, 한글파일을 일반문서폴더에서 hwp_files_by_policy로 끌어오기
+                        #if policy_doc.url in existing_policy_docs:
+                        previous_file_name = str(result["idx"]) + "_" + str(result["date"]) + "_" + str(result["doc_id"]) + ".hwp"
+                        previous_file_path = "/Volumes/Backup/data/hwp_files/hwp_files_%s/%s" % (current_month, previous_file_name)
+                        # 해당파일이 현재 폴더에 없다면 부적합(내부결재 혹은 비공개)한 파일인 것
+                        if os.path.exists(previous_file_path):
+                            print(previous_file_name)
+                            new_file_name = policy_doc.policy_id + "_" + str(policy_doc.doc_id) + "_" + policy_doc.date + ".hwp"
+                            os.rename(previous_file_path, "/Volumes/Backup/data/hwp_files/hwp_files_by_policy/%s" % new_file_name)
+                            policy_doc.insert_relevant_doc_info_by_policy(cursor2)
+
+                    conn.commit()
 
     def write_results_to_txt(self, txt_file_name, documents):
         with open(txt_file_name, 'w') as txtfile:
