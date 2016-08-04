@@ -18,9 +18,9 @@ class PolicyDocument(Document.Document):
                                                 self.url_for_hwp_file, self.hwp_file_name, self.is_public))
         print("Inserted: " + self.policy_id + ", " + str(self.doc_id) + ", " + str(self.policy_title))
 
-    def get_policy_urls_by_policy_id(self):
-        conn = sqlite3.connect(DATABASE_NAME)
-        cursor = conn.cursor()
+    def get_policy_urls_by_policy_id(self, cursor):
+        #conn = sqlite3.connect(DATABASE_NAME)
+        #cursor = conn.cursor()
         rows = [ row[0] for row in cursor.execute('select url from policy_documents').fetchall() ]
 
         return rows

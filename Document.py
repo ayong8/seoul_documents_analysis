@@ -2,8 +2,11 @@ import sqlite3
 import csv
 import re
 import os
+import requests
+from tqdm import tqdm
 from datetime import datetime
 import pandas as pd
+import shutil
 
 
 DATABASE_NAME = './seoul_documents.db'
@@ -118,6 +121,8 @@ class Document:
                         results = cursor.execute(query, ['%'+tokens[0]+'%','%'+tokens[1]+'%'])
                     if len(tokens) == 3:
                         results = cursor.execute(query, ['%'+tokens[0]+'%', '%'+tokens[1]+'%', '%'+tokens[2]+'%'])
+                    if len(tokens) == 4:
+                        results = cursor.execute(query, ['%' + tokens[0] + '%', '%' + tokens[1] + '%', '%' + tokens[2] + '%', '%' + tokens[3] + '%'])
                     #existing_policy_docs = policy_doc.get_policy_urls_by_policy_id()
                     for result in results:
                         policy_doc = PolicyDocument.PolicyDocument("","","","","","","","","","","","","")
@@ -135,6 +140,28 @@ class Document:
                         policy_doc.hwp_file_name = result["hwp_file_name"]
                         policy_doc.is_public = result["public"]
 
+                        if policy_doc.url_for_hwp_file:
+                            try:
+                                headers = {'Connection': 'close'}
+                                response2 = requests.get(policy_doc.url_for_hwp_file, headers=headers, timeout=15)  # doc_info[9] = url_for_hwp_file
+                                with open(policy_doc.hwp_file_name, "wb") as handle:  # doc_info[10] = hwp_file_name
+                                    print("start downloading")
+                                    for data in tqdm(response2.iter_content()):
+                                        handle.write(data)
+
+                                # 현재 다운로드받은 파일
+                                hwp_file_name = policy_doc.hwp_file_name
+                                # 이미 정책문서가 들어있는 것이라면
+                                new_file_name = policy_doc.policy_id + "_" + str(policy_doc.doc_id) + "_" + policy_doc.date + "_" + policy_doc.title + ".hwp"
+                                if hwp_file_name:
+                                    shutil.move(hwp_file_name,
+                                              "/Volumes/Backup/data/hwp_files/hwp_files_by_policy/%s" % new_file_name)
+                                response2.connection.close()
+                            except requests.exceptions.ConnectionError as e:
+                                print(e)
+                            except requests.exceptions.ReadTimeout as e2:
+                                print(e2)
+                        '''
                         # DB에 넣고, 한글파일을 일반문서폴더에서 hwp_files_by_policy로 끌어오기
                         #if policy_doc.url in existing_policy_docs:
                         previous_file_name = str(result["idx"]) + "_" + str(result["date"]) + "_" + str(result["doc_id"]) + ".hwp"
@@ -145,6 +172,7 @@ class Document:
                             new_file_name = policy_doc.policy_id + "_" + str(policy_doc.doc_id) + "_" + policy_doc.date + ".hwp"
                             os.rename(previous_file_path, "/Volumes/Backup/data/hwp_files/hwp_files_by_policy/%s" % new_file_name)
                             policy_doc.insert_relevant_doc_info_by_policy(cursor2)
+                        '''
 
                     conn.commit()
 

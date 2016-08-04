@@ -114,7 +114,7 @@ class Date:
 
         from_date = from_year + "-" + from_month + "-" + from_day
         to_date = to_year + "-" + to_month + "-" + to_day
-        print(from_date, to_date)
+
         return (from_date, to_date)
 
     # min_date : YYYY-MM-DD
@@ -131,7 +131,6 @@ class Date:
         return str(from_date)
 
     def set_range_of_to_date(self, to_date, min_date, max_date):
-        print("to_date and max_date: " + str(to_date) + str(max_date))
         to_date = date(int(to_date.split("-")[0]), int(to_date.split("-")[1]), int(to_date.split("-")[2]))
         min_date = date(int(min_date.split("-")[0]), int(min_date.split("-")[1]), int(min_date.split("-")[2]))
         max_date = date(int(max_date.split("-")[0]), int(max_date.split("-")[1]), int(max_date.split("-")[2]))
