@@ -35,7 +35,7 @@ class Network():
 
         #plt.show()
         #f = plt.figure()
-        #os.system('mkdir ./graphs_for_policy/%s' % policy_id)
+        os.system('mkdir ./graphs_for_policy/%s' % policy_id)
         plt.axis('off')
         plt.savefig("./graphs_for_policy/%s/%s.png" % (policy_id, month), bbox_inches="tight")
         plt.clf()

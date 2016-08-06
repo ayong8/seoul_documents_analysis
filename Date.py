@@ -7,8 +7,8 @@ START_YEAR = "2011"
 START_MONTH = "01"
 START_DAY = "01"
 END_YEAR = "2016"
-END_MONTH = "04"
-END_DAY = "30"
+END_MONTH = "12"
+END_DAY = "31"
 
 class Date:
     def __init__(self, from_date, to_date):
@@ -72,48 +72,53 @@ class Date:
         to_day = END_DAY
 
         # ~ 뒤에 to_date에 해당하는 문자열이 있다면
-        if len(date_from_to_tokens) == 2:
-            # 잡아낸 숫자토큰이 두개라면 (e.g., 2013년 ~ 2019년)
-            if len(date_tokens) == 2:
-                from_year = self.format_year(date_tokens[0])
-                to_year = self.format_year(date_tokens[1])
-                to_month = str(12)
-                to_day = str(31)
-            # 잡아낸 숫자토큰이 두개라면 (e.g., 2013년 3월 ~ 2019년 9월)
-            if len(date_tokens) == 4:
-                from_year = self.format_year(date_tokens[0])
-                from_month = self.format_month(date_tokens[1])
-                to_year = self.format_year(date_tokens[2])
-                to_month = self.format_month(date_tokens[3])
-                to_day = self.format_last_day_of_month(to_year, to_month)
-            # 잡아낸 숫자토큰이 두개라면 (e.g., 2013.3.21 ~ 2019.2.5)
-            if len(date_tokens) == 6:
-                from_year = self.format_year(date_tokens[0])
-                from_month = self.format_month(date_tokens[1])
-                from_day = self.format_day(date_tokens[2])
-                to_year = self.format_year(date_tokens[3])
-                to_month = self.format_month(date_tokens[4])
-                to_day = self.format_day(date_tokens[5])
-        # ~ 뒤에 to_date에 해당하는 문자열이 없다면
-        else:
-            # 잡아낸 숫자토큰이 한개라면 (e.g., 2013년 ~ 지속)
-            if len(date_tokens) == 1:
-                from_year = self.format_year(date_tokens[0])
-            # 잡아낸 숫자토큰이 두개라면 (e.g., 13.01 ~ )
-            if len(date_tokens) == 2:
-                from_year = self.format_year(date_tokens[0])
-                from_month = self.format_month(date_tokens[1])
-            # 잡아낸 숫자토큰이 두개라면 (e.g., 2014.2.1 ~ )
-            if len(date_tokens) == 3:
-                from_year = self.format_year(date_tokens[0])
-                from_month = self.format_month(date_tokens[1])
-                from_day = self.format_day(date_tokens[2])
+        try:
+            if re.findall("[0-9]+", date_from_to_tokens[1]):
+                # 잡아낸 숫자토큰이 두개라면 (e.g., 2013년 ~ 2019년)
+                if len(date_tokens) == 2:
+                    from_year = self.format_year(date_tokens[0])
+                    to_year = self.format_year(date_tokens[1])
+                # 잡아낸 숫자토큰이 두개라면 (e.g., 2013년 3월 ~ 2019년 9월)
+                elif len(date_tokens) == 4:
+                    from_year = self.format_year(date_tokens[0])
+                    from_month = self.format_month(date_tokens[1])
+                    to_year = self.format_year(date_tokens[2])
+                    to_month = self.format_month(date_tokens[3])
+                    to_day = self.format_last_day_of_month(to_year, to_month)
+                # 잡아낸 숫자토큰이 두개라면 (e.g., 2013.3.21 ~ 2019.2.5)
+                elif len(date_tokens) == 6:
+                    from_year = self.format_year(date_tokens[0])
+                    from_month = self.format_month(date_tokens[1])
+                    from_day = self.format_day(date_tokens[2])
+                    to_year = self.format_year(date_tokens[3])
+                    to_month = self.format_month(date_tokens[4])
+                    to_day = self.format_day(date_tokens[5])
+            # ~ 뒤에 to_date에 해당하는 문자열이 없다면
+            else:
+                # 아예 무의미한 문자들이 들어가 있다면 (e.g., "-")
+                if len(date_tokens) == 0:
+                    pass
+                # 잡아낸 숫자토큰이 한개라면 (e.g., 2013년 ~ 지속)
+                if len(date_tokens) == 1:
+                    from_year = self.format_year(date_tokens[0])
+                # 잡아낸 숫자토큰이 두개라면 (e.g., 13.01 ~ )
+                elif len(date_tokens) == 2:
+                    from_year = self.format_year(date_tokens[0])
+                    from_month = self.format_month(date_tokens[1])
+                # 잡아낸 숫자토큰이 두개라면 (e.g., 2014.2.1 ~ )
+                elif len(date_tokens) == 3:
+                    from_year = self.format_year(date_tokens[0])
+                    from_month = self.format_month(date_tokens[1])
+                    from_day = self.format_day(date_tokens[2])
+        except IndexError:
+            pass
 
         # 각 해당월의 마지막 달을 포맷
 
 
         from_date = from_year + "-" + from_month + "-" + from_day
         to_date = to_year + "-" + to_month + "-" + to_day
+        print(from_date, to_date)
 
         return (from_date, to_date)
 
@@ -131,6 +136,30 @@ class Date:
         return str(from_date)
 
     def set_range_of_to_date(self, to_date, min_date, max_date):
+        to_date = date(int(to_date.split("-")[0]), int(to_date.split("-")[1]), int(to_date.split("-")[2]))
+        min_date = date(int(min_date.split("-")[0]), int(min_date.split("-")[1]), int(min_date.split("-")[2]))
+        max_date = date(int(max_date.split("-")[0]), int(max_date.split("-")[1]), int(max_date.split("-")[2]))
+
+        if to_date < min_date:
+            to_date = "Invalid"
+        elif to_date >= max_date:
+            to_date = max_date
+
+        return str(to_date)
+
+    def set_range_of_from_date_2011_2016(self, from_date, min_date, max_date):
+        from_date = date(int(from_date.split("-")[0]), int(from_date.split("-")[1]), int(from_date.split("-")[2]))
+        min_date = date(int(min_date.split("-")[0]), int(min_date.split("-")[1]), int(min_date.split("-")[2]))
+        max_date = date(int(max_date.split("-")[0]), int(max_date.split("-")[1]), int(max_date.split("-")[2]))
+
+        if from_date <= min_date:
+            from_date = from_date
+        elif from_date > max_date:
+            from_date = "Invalid"
+
+        return str(from_date)
+
+    def set_range_of_to_date_2011_2016(self, to_date, min_date, max_date):
         to_date = date(int(to_date.split("-")[0]), int(to_date.split("-")[1]), int(to_date.split("-")[2]))
         min_date = date(int(min_date.split("-")[0]), int(min_date.split("-")[1]), int(min_date.split("-")[2]))
         max_date = date(int(max_date.split("-")[0]), int(max_date.split("-")[1]), int(max_date.split("-")[2]))
