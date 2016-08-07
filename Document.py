@@ -117,11 +117,11 @@ class Document:
                     print("current month: " + current_month)
                     if len(tokens) == 1:
                         results = cursor.execute(query, ['%'+tokens[0]+'%'])
-                    if len(tokens) == 2:
+                    elif len(tokens) == 2:
                         results = cursor.execute(query, ['%'+tokens[0]+'%','%'+tokens[1]+'%'])
-                    if len(tokens) == 3:
+                    elif len(tokens) == 3:
                         results = cursor.execute(query, ['%'+tokens[0]+'%', '%'+tokens[1]+'%', '%'+tokens[2]+'%'])
-                    if len(tokens) == 4:
+                    elif len(tokens) == 4:
                         results = cursor.execute(query, ['%' + tokens[0] + '%', '%' + tokens[1] + '%', '%' + tokens[2] + '%', '%' + tokens[3] + '%'])
                     #existing_policy_docs = policy_doc.get_policy_urls_by_policy_id()
                     for result in results:

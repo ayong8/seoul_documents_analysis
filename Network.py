@@ -8,7 +8,7 @@ class Network():
         self.edges = edges
 
     ### weight도 포함된 데이터를 보내야 되나
-    def make_graph(self, policy_id, month):
+    def make_graph(self, policy_id, month, policy_title):
         print("Now: " + policy_id + ", " + month)
         # self.edges is a dictionary
         edges = []
@@ -35,9 +35,10 @@ class Network():
 
         #plt.show()
         #f = plt.figure()
-        os.system('mkdir ./graphs_for_policy/%s' % policy_id)
+        policy_folder_name = policy_id + "_" + policy_title.replace(" ","").replace("/","").replace("'", "")
+        os.system("mkdir './graphs_for_policy/%s'" % policy_folder_name)
         plt.axis('off')
-        plt.savefig("./graphs_for_policy/%s/%s.png" % (policy_id, month), bbox_inches="tight")
+        plt.savefig("./graphs_for_policy/%s/%s.png" % (policy_folder_name, month), bbox_inches="tight")
         plt.clf()
         G.clear()
 

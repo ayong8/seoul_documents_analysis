@@ -30,7 +30,9 @@ def Find_hwp_file_name_and_download_hwp(current_month, doc_list, conn):
     #url = 'http://opengov.seoul.go.kr/sanction/8502402'
     print("start requesting original url")
     #session = FuturesSession()
-    responses = (grequests.get(doc.url) for doc in doc_list)
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36'}
+    responses = (grequests.get(doc.url, headers=headers) for doc in doc_list)
 
     # Cursor for DB
     cursor1 = conn.cursor()
@@ -66,11 +68,11 @@ def Find_hwp_file_name_and_download_hwp(current_month, doc_list, conn):
     print("# of hwp files that will be downloaded: " + str(len(doc_list)))
     # Request hwp file
     for doc in doc_list:
-        print(doc)
         # url_for_hwp_file이 비어있는 경우를 피한다
         print("url for hwp file is " + doc.url_for_hwp_file)
         if doc.url_for_hwp_file:
-            headers = {'Connection': 'close'}
+            headers = {'Connection': 'close', \
+                       'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36'}
             # Request timeout가 아닐 경우에만 진행
             try:
                 response2 = requests.get(doc.url_for_hwp_file, headers=headers, timeout=15)   # doc_info[9] = url_for_hwp_file
@@ -85,14 +87,14 @@ def Find_hwp_file_name_and_download_hwp(current_month, doc_list, conn):
                 # 새 이름을 doc_info[10]에 저장
                 doc.hwp_file_name = new_hwp_file_name
                 # 새 경로를 지정
-                hwp_file_new_path = "./data/hwp_files/hwp_files_%s/" % current_month + new_hwp_file_name
+                hwp_file_new_path = "/Volumes/Backup/data/hwp_files/hwp_files_%s/" % current_month + new_hwp_file_name
                 # 기존 이름(previous_hwp_file_name) => 새 이름(new_hwp_file_name)
                 print("New hwp file path is " + hwp_file_new_path)
                 print("Previous hwp file name is " + previous_hwp_file_name)
                 # hwp 파일이름을 바꾼다
                 # hwp파일이 전송된 것이 있을 경우에만 파일이름을 바꾼다
                 if previous_hwp_file_name:
-                    os.rename(previous_hwp_file_name, hwp_file_new_path)
+                    shutil.move(previous_hwp_file_name, hwp_file_new_path)
                 response2.connection.close()
             except requests.exceptions.ConnectionError as e:
                 print(e)
@@ -444,33 +446,26 @@ def Extract_hwp_sources_and_find_receivers_for_policy(txt_file_name):
     policy_id = ''.join(re.findall(r'([0-9]+-[0-9]+)(?:_)', txt_file_name))
     doc_id = ''.join(re.findall(r'(?:_)([0-9]+)(?:_)', txt_file_name))
 
-    receiver_text = ''.join(re.findall(r'[0-9ㄱ-ㅎㅏ-ㅣ가-힣(), ]+</CHAR>', hwp_code))
+    receiver_text = [ text.replace(" ","") for text in re.findall('(?:<CHAR>)(.*?)(?:</CHAR>)', hwp_code) ]
 
-    if '수신' in receiver_text: # or (receiver_text.find(u'수신') != -1):   # !!!!!!!!! 수 신 자 도 잡아내자
-        receiver_text = receiver_text[(receiver_text.index(u'수신')+len(u'수신')):]
-        # 수신자 단어 외에 '수신자 참조'라는 단어가 있어서 '수신자'가 제대로 잡히지 않은 경우, 다시 한번 잡아낸다
-        if '수신자' in receiver_text:
-            receiver_text = receiver_text[(receiver_text.index(u'수신자')+len(u'수신자')):]
-        # '수신자참조'가 있는 경우, 문서 하단에 수신자가 나열되어 있는 경우가 있다. 그러므로 '수신자' 단어를 다시 한번 잡아내야 한다
-        if '수신자' in receiver_text:
-            receiver_text = receiver_text[(receiver_text.index(u'수신자')+len(u'수신자')):]
-        # 두번째 등장하는 </span>까지 자르면 수신자 목록만 남게 된다
-        span_index = receiver_text.index('</CHAR>')
-        span_index2 = receiver_text.index('</CHAR>', receiver_text.index('</CHAR>')+1)
-        # 마침내 수신자 목록을 얻었다..하....
-        receiver = receiver_text[span_index+len('</CHAR>'):span_index2]
-        # 공백이 있는 경우 제거하기
-        receiver = receiver.replace(" ", "")
-        #match = hangul.search(receiver_text)
-        #print receiver_text[match.start():match.end()]
-        print("receiver: " + receiver)
-
-        # regex에서 도출된 row index 텍스트에서 _를 제외한다
-        return (policy_id, doc_id, receiver)
+    if "수신" in receiver_text:
+        if "수신자참조" in receiver_text:
+            if "수신자" in receiver_text:
+                receiver_index = receiver_text.index("수신자") + 1
+                receiver = receiver_text[receiver_index]
+            else:
+                receiver = "No receiver"
+        else:
+            if "수신" in receiver_text:
+                receiver_index = receiver_text.index("수신") + 1
+                receiver = receiver_text[receiver_index]
+            else:
+                receiver = "No receiver"
     else:
         receiver = "No receiver"
-        print("No receiver")
-        return (policy_id, doc_id, receiver)
+
+    print("receiver: " + receiver)
+    return (policy_id, doc_id, receiver)
 
 
 def main():
@@ -483,7 +478,7 @@ def main():
         start_idx = int(input("Enter the start index : "))
 
         end_idx = 0
-        range_idx = 50
+        range_idx = 75
 
         doc_list = []
 
@@ -707,9 +702,10 @@ def main():
         for key1, edges in filtered_edges_dict.items():
             policy_id = key1[0]
             month = key1[1]
+            policy_title = key1[2]
             network = None
             network = Network(edges)
-            network.make_graph(policy_id, month)
+            network.make_graph(policy_id, month, policy_title)
 
     if option == '51':
         for i in range(18):
@@ -795,9 +791,10 @@ def main():
 
 
     if option == '99':
-        doc_url = "http://opengov.seoul.go.kr/sanction/9176301"
-        str_1 = "http://opengov.seoul.go.kr" + doc_url.replace("http://opengov.seoul.go.kr", "")
-        print(str_1)
+        txt_file_path = "/Volumes/Backup/data/txt_files/txt_files_by_policy/2011-36_1304270_20140417.txt"
+
+        result = Extract_hwp_sources_and_find_receivers_for_policy(txt_file_path)
+        print(result)
 
 def menu():
 
