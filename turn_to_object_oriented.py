@@ -470,7 +470,7 @@ def Extract_hwp_sources_and_find_receivers_for_policy(txt_file_name):
 
 def main():
     option = input("Select menu: ")
-    conn = sqlite3.connect("./seoul_documents.db")
+    conn = sqlite3.connect(DATABASE_NAME)
     connection = Connection("", "", "", "")
 
     if option == "1":
@@ -705,7 +705,24 @@ def main():
             policy_title = key1[2]
             network = None
             network = Network(edges)
-            network.make_graph(policy_id, month, policy_title)
+            network.draw_policy_graph_by_month(policy_id, month, policy_title)
+
+    if option == '42':
+        department = Department("")
+        depts_list = department.get_all_departments("./data/seoul_departments.txt")
+        towns_list = department.get_all_towns_in_seoul()
+        connections = connection.get_senders_and_receivers()
+        edges_dict = connection.count_connections_by_policy(connections)
+
+        filtered_edges_dict = department.verify_dep_names_by_policy_and_date(edges_dict, depts_list,
+                                                                             towns_list)
+
+        for key1, edges in filtered_edges_dict.items():
+            policy_id = key1[0]
+            policy_title = key1[1]
+            network = None
+            network = Network(edges)
+            network.make_whole_policy_graph(policy_id, policy_title)
 
     if option == '51':
         for i in range(18):
@@ -789,6 +806,21 @@ def main():
 
         conn.commit()
 
+    if option == '61':
+        department = Department("")
+        depts_list = department.get_all_departments("./data/seoul_departments.txt")
+        towns_list = department.get_all_towns_in_seoul()
+        connections = connection.get_senders_and_receivers()
+        edges_dict = connection.count_connections_by_policy(connections)
+
+        filtered_edges_dict = department.verify_dep_names_by_policy_and_date(edges_dict, depts_list,
+                                                                             towns_list)
+        for key1, edges in filtered_edges_dict.items():
+            policy_id = key1[0]
+            policy_title = key1[1]
+            network = None
+            network = Network(edges)
+            network.calculate_centralization_of_policy_graph(policy_id, policy_title)
 
     if option == '99':
         txt_file_path = "/Volumes/Backup/data/txt_files/txt_files_by_policy/2011-36_1304270_20140417.txt"
@@ -819,14 +851,17 @@ def menu():
         "\t 31. 일반문서로부터 정책키워드로 정책과 관련된 일반문서 가져오기 \n" \
         "\t 32. 서울시 홈페이지 검색을 통해 정책관련문서 검색하기 \n"\
 
-        "그룹 3. 네트워크 시각화 \n" \
+        "그룹 4. 네트워크 시각화 \n" \
         "\t 41. 정책문서 시각화 \n" \
 
-        "그룹 4. DB queries \n" \
+        "그룹 5. DB queries \n" \
         "\t 51. Insert: 정책 데이터 저장 \n" \
         "\t 52. Insert: 월별 수신자 정보 추출 from txt files & 저장\n"\
         "\t 53. Update: 정책 키워드 입력하기"
         "\t 56. Select: 일반문서 데이터를 정책 키워드로 검색하여 정책관련문서 추리기 \n" \
+ \
+        "그룹 6. 네트워크 속성 \n" \
+        "\t 61. 정책별 네트워크 + centralization  \n" \
         )
 
 main()

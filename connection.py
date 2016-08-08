@@ -2,7 +2,7 @@ import sqlite3
 import csv
 import re
 
-DATABASE_NAME = "./seoul_documents.db"
+DATABASE_NAME = "../seoul_documents_analysis/seoul_documents.db"
 
 class Connection:
     def __init__(self, doc_idx, sender, receiver, labels):
@@ -67,18 +67,30 @@ class Connection:
                         edges_count_dict_by_policy_and_date[(policy_id, month, policy_title)][(sender, receiver)] = 1
 
         return edges_count_dict_by_policy_and_date
-        '''
-        #print("# of kinds of edges: " + str(len(connection_counter_dict)))
-        with open("./data/edges_for_policy.txt", "w") as txt_file:
-            for key1, edges in edges_count_dict_by_policy_and_date.items():
-                policy_id = key1[0]
-                month = key1[0]
-                for key2, count in edges.items():
-                    sender = key2[0]
-                    receiver = key2[1]
-                    txt_file.write(policy_id + "\t" + month + "\t" + \
-                                   sender + "\t" + receiver + "\t" + str(count) + "\n")
-        '''
+
+    def count_connections_by_policy(self, connections):
+        edges_count_dict_by_policy_and_date = {}
+        for connection in connections:
+            sender = connection.sender
+            receivers = connection.receiver
+            policy_id = connection.labels["policy_id"]
+            policy_title = connection.labels["policy_title"]
+            # Filter by policy_id and date
+            if (policy_id, policy_title) not in edges_count_dict_by_policy_and_date.keys():
+                edges_count_dict_by_policy_and_date[(policy_id, policy_title)] = {}
+
+            # If sender and receiver exist
+            if sender and receivers and (receivers != 'No receiver'):
+                # Iterate over all receivers if there are more than two receivers
+                for receiver in receivers.split(","):
+                    # There is same entry that was already inserted in the dictionary,
+                    if (sender, receiver) in edges_count_dict_by_policy_and_date[
+                        (policy_id, policy_title)].keys():
+                        edges_count_dict_by_policy_and_date[(policy_id, policy_title)][(sender, receiver)] += 1
+                    else:
+                        edges_count_dict_by_policy_and_date[(policy_id, policy_title)][(sender, receiver)] = 1
+
+        return edges_count_dict_by_policy_and_date
 
 
     ### Get all senders and receivers from desirable period of months
