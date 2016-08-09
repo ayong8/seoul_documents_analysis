@@ -822,6 +822,22 @@ def main():
             network = Network(edges)
             network.calculate_centralization_of_policy_graph(policy_id, policy_title)
 
+    if option == '62':
+        department = Department("")
+        depts_list = department.get_all_departments("./data/seoul_departments.txt")
+        towns_list = department.get_all_towns_in_seoul()
+        connections = connection.get_senders_and_receivers()
+        edges_dict = connection.count_connections_by_policy(connections)
+
+        filtered_edges_dict = department.verify_dep_names_by_policy_and_date(edges_dict, depts_list,
+                                                                             towns_list)
+        for key1, edges in filtered_edges_dict.items():
+            policy_id = key1[0]
+            policy_title = key1[1]
+            network = None
+            network = Network(edges)
+            network.calculate_centrality_of_policy_graph(policy_id, policy_title)
+
     if option == '99':
         txt_file_path = "/Volumes/Backup/data/txt_files/txt_files_by_policy/2011-36_1304270_20140417.txt"
 
@@ -862,6 +878,7 @@ def menu():
  \
         "그룹 6. 네트워크 속성 \n" \
         "\t 61. 정책별 네트워크 + centralization  \n" \
+        "\t 61. 정책별 네트워크 + centrality \n" \
         )
 
 main()

@@ -77,6 +77,13 @@ class Network():
 
         print(centralization)
 
+    def calculate_centrality_of_policy_graph(self, policy_id, policy_title):
+        (G, graph_pos, weights) = self.make_graph()
+        nodes_centrality_dict = nx.degree_centrality(G)
+
+        for node, centrality in nodes_centrality_dict.items():
+            print(node + ": " + "{0:.2f}".format(centrality))
+
 
 
 
