@@ -31,7 +31,7 @@ class Connection:
         print("# of kinds of edges: " + str(len(connection_counter_dict)))
         with open("./data/edges_for_policy.txt", "w") as txt_file:
             for key, count in connection_counter_dict.items():
-                print(key[0], key[1], count)
+                #print(key[0], key[1], count)
                 txt_file.write(key[0] + "\t" + key[1] + "\t" + str(count) + "\n")
 
     ### 정책별, 날짜별로 정제해서 dictionary로 추출

@@ -793,7 +793,7 @@ def main():
 
                     conn.commit()
         conn.close()
-    if option == '53':
+    if option == '56':
         cursor = conn.cursor()
         # 정책키워드...
         file = open("./data/policy_keywords.txt", "r")
@@ -805,6 +805,40 @@ def main():
             cursor.execute("update policy SET keyword=? where id=?", (keywords, policy_id))
 
         conn.commit()
+
+    if option == '57':
+        cursor = conn.cursor()
+        cursor.row_factory = sqlite3.Row
+
+        department = Department("")
+        depts_list = department.get_all_departments("./data/seoul_departments.txt")
+        towns_list = department.get_all_towns_in_seoul()
+        connections = connection.get_senders_and_receivers()
+        edges_dict = connection.count_connections_by_policy(connections)
+
+        filtered_edges_dict = department.verify_dep_names_by_policy_and_date(edges_dict, depts_list,
+                                                                             towns_list)
+
+        with open('policy_data.csv', 'w') as csvfile:
+            writer = csv.writer(csvfile, delimiter=",")
+            for key1, edges in filtered_edges_dict.items():
+                policy_id = key1[0]
+                policy_title = key1[1]
+                network = None
+                network = Network(edges)
+                centralization_score = network.calculate_centralization_of_policy_graph(policy_id, policy_title)
+                nodes_centrality_dict = network.calculate_centrality_of_policy_graph(policy_id, policy_title)
+                for row in cursor:
+                    if policy_id == row["id"]:
+                        for node, centrality in nodes_centrality_dict.items():
+                            if node == row["department"]:
+                                print([row["id"], row["title"], row["department"], centralization_score, \
+                                                "{0:.2f}".format(centrality), row["budget"], row["area"]])
+                                writer.writerow([row["id"], row["title"], row["department"], centralization_score, \
+                                                "{0:.2f}".format(centrality), row["budget"], row["area"]])
+
+        conn.commit()
+        conn.close()
 
     if option == '61':
         department = Department("")
@@ -875,6 +909,7 @@ def menu():
         "\t 52. Insert: 월별 수신자 정보 추출 from txt files & 저장\n"\
         "\t 53. Update: 정책 키워드 입력하기"
         "\t 56. Select: 일반문서 데이터를 정책 키워드로 검색하여 정책관련문서 추리기 \n" \
+        "\t 57. Select: 정책별 사업번호, 사업명, 주무부서 and centralization, centrality of primary department -> csv로 출력 \n" \
  \
         "그룹 6. 네트워크 속성 \n" \
         "\t 61. 정책별 네트워크 + centralization  \n" \

@@ -16,7 +16,7 @@ class Network():
         edges = []
         for edge, count in self.edges.items():
             # Transform dictionary into tuples with three elements (source, target, weight)
-            print(edge[0], edge[1], count)
+            #print(edge[0], edge[1], count)
             edges.append((edge[0], edge[1], count))
 
         fp1 = fm.FontProperties(
@@ -77,12 +77,16 @@ class Network():
 
         print(centralization)
 
+        return centralization
+
     def calculate_centrality_of_policy_graph(self, policy_id, policy_title):
         (G, graph_pos, weights) = self.make_graph()
         nodes_centrality_dict = nx.degree_centrality(G)
 
-        for node, centrality in nodes_centrality_dict.items():
-            print(node + ": " + "{0:.2f}".format(centrality))
+        #for node, centrality in nodes_centrality_dict.items():
+        #    print(node + ": " + "{0:.2f}".format(centrality))
+
+        return nodes_centrality_dict
 
 
 

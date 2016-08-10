@@ -83,8 +83,8 @@ class Department:
                                 total_count += 1
                             break
 
-        print("total count of filtered docs: " + str(total_count))
-        print(filtered_edges_dict)
+        #print("total count of filtered docs: " + str(total_count))
+        #print(filtered_edges_dict)
         return filtered_edges_dict
 
     def write_csv_for_gephi(self, depts_list, filtered_connections_dict, csv_file_name):
