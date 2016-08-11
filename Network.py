@@ -75,7 +75,7 @@ class Network():
         max_in = max(indegrees)
         centralization = float((N * max_in - sum(indegrees))) / (N - 1) ** 2
 
-        print(centralization)
+        #print(centralization)
 
         return centralization
 

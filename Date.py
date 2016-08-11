@@ -57,7 +57,7 @@ class Date:
 
 
     ### Input: [start date in any format] ~ [end date in any format]
-    ### Output: tuple of (from_date, to_date)
+    ### Output: tuple of (from_date, to_date) in the format of YYYY-MM-DD
     def format_date(self, date_str):
         date_from_to_tokens = date_str.split("~")
         # 숫자들만 다 잡아낸다
@@ -146,6 +146,8 @@ class Date:
             to_date = max_date
 
         return str(to_date)
+
+
 
     def set_range_of_from_date_2011_2016(self, from_date, min_date, max_date):
         from_date = date(int(from_date.split("-")[0]), int(from_date.split("-")[1]), int(from_date.split("-")[2]))

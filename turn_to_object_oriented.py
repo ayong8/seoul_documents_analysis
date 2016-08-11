@@ -528,22 +528,39 @@ def main():
         connection.write_connections_to_csv("connections.csv", connections)
 
     if option == '7':
+        print("한달씩 입력해야 한다. (1월을 출력하고 싶다면, 2015-01 , 2015-02를 입력.")
+        from_month = input("Enter a starting month (e.g., 2015-01) : ")
+        to_month = input("Enter a ending month (e.g., 2016-04) : ")
+
+        department = Department("")
+        depts_list = department.get_all_departments("./data/seoul_departments.txt")
+        towns_list = department.get_all_towns_in_seoul()
+
+        connections = connection.get_senders_and_receivers_by_month(from_month, to_month)
+        connection.count_connections(connections)
+        counted_connections_dict = connection.count_connections(connections)
+        filtered_connections_dict = department.verify_dep_names(counted_connections_dict, depts_list,
+                                                                towns_list)
+        department.write_csv_for_gephi(depts_list, filtered_connections_dict, "edges_list_%s.csv" % from_month.replace("-", ""))
+
+
+    if option == '8':
         # argument: idx, work_category, title, sender, receiver
         document = Document.Document("", "", "", "", "")
         documents = document.get_doc_info(1, 1)
         document.write_results_to_txt("doc_info_201501.txt", documents)
 
-    if option == '8':
+    if option == '9':
         department = Department("")
         depts_list = department.get_all_departments("seoul_departments.txt")
         towns_list = department.get_all_towns_in_seoul()
         connections = connection.get_senders_and_receivers_by_month(1, 1)
-        counted_connections = connection.count_connections(connections)
-        filtered_connections_dict = department.verify_dep_names_from_txt_file("edges_201501.txt", depts_list,
+        counted_connections_dict = connection.count_connections(connections)
+        filtered_connections_dict = department.verify_dep_names(counted_connections_dict, depts_list,
                                                                               towns_list)
         department.write_csv_for_gephi(depts_list, filtered_connections_dict, "edges_list_201501.csv")
 
-    if option == '9':
+    if option == '10':
         document = Document.Document()
         document.count_documents_by_condition()
 
@@ -651,7 +668,6 @@ def main():
             policy.id = row["id"]
             policy.title = row["title"]
             print("Current policy is " + policy.id)
-            policy.date = Date("", "")
             policy.keyword = row["keyword"]
             policy.date = Date("", "")
             print("Policy period is " + row["period"])
@@ -810,6 +826,7 @@ def main():
         cursor = conn.cursor()
         cursor.row_factory = sqlite3.Row
 
+
         department = Department("")
         depts_list = department.get_all_departments("./data/seoul_departments.txt")
         towns_list = department.get_all_towns_in_seoul()
@@ -821,21 +838,33 @@ def main():
 
         with open('policy_data.csv', 'w') as csvfile:
             writer = csv.writer(csvfile, delimiter=",")
-            for key1, edges in filtered_edges_dict.items():
-                policy_id = key1[0]
-                policy_title = key1[1]
-                network = None
+            print(len(filtered_edges_dict.items()))
+            for key, edges in filtered_edges_dict.items():
+                #print(key1[0])
+                policy_id = key[0]
+                policy_dept = key[1]
+                policy_title = key[2]
                 network = Network(edges)
                 centralization_score = network.calculate_centralization_of_policy_graph(policy_id, policy_title)
                 nodes_centrality_dict = network.calculate_centrality_of_policy_graph(policy_id, policy_title)
+                cursor.execute("select * from policy")
                 for row in cursor:
                     if policy_id == row["id"]:
-                        for node, centrality in nodes_centrality_dict.items():
-                            if node == row["department"]:
-                                print([row["id"], row["title"], row["department"], centralization_score, \
-                                                "{0:.2f}".format(centrality), row["budget"], row["area"]])
-                                writer.writerow([row["id"], row["title"], row["department"], centralization_score, \
-                                                "{0:.2f}".format(centrality), row["budget"], row["area"]])
+                        if policy_dept in nodes_centrality_dict.keys():
+                            centrality = nodes_centrality_dict[policy_dept]
+                            print(row["id"], row["title"], policy_dept, "{0:.2f}".format(centralization_score), \
+                                                "{0:.2f}".format(centrality), row["budget"], row["area"])
+                        # 이름이 정확히 일치하는 부서가 없다면,
+                        else:
+                            # Just capture the department with the maximum centrality
+                            policy_dept = max(nodes_centrality_dict, key=nodes_centrality_dict.get)
+                            centrality = nodes_centrality_dict[policy_dept]
+                            print(row["id"], row["title"], policy_dept, "{0:.2f}".format(centralization_score), \
+                                  "{0:.2f}".format(centrality), row["budget"], row["area"])
+
+                        writer.writerow([row["id"], row["title"], policy_dept, "{0:.2f}".format(centralization_score), \
+                             "{0:.2f}".format(centrality), row["budget"], row["area"]])
+
 
         conn.commit()
         conn.close()
@@ -886,10 +915,11 @@ def menu():
         "\t 2. txt 파일로 변환 \n" \
         "\t 4. DB로부터 송수신자 받아서 출력하기\n" \
         "\t 5. 송수신자 종류별로 주고받은 문서개수 세고 딕셔너리에 저장하기\n" \
-        "\t 6. 송수신자 정보 csv에 출력하기\n" \
-        "\t 7. 문서 정보 txt에 출력하기\n" \
-        "\t 8. 서울시 내부부서만 가려내서 출력하기\n"
-        "\t 9. 조건에 맞는 문서개수 파악하기\n"
+        "\t 6. Gephi: 송수신자 정보 csv에 출력하기\n" \
+        "\t 7. Gephi: 송수신자 정보를 월별로 csv에 출력하기\n" \
+        "\t 8. 문서 정보 txt에 출력하기\n" \
+        "\t 9. 서울시 내부부서만 가려내서 출력하기\n"
+        "\t 10. 조건에 맞는 문서개수 파악하기\n"
 
         "그룹 2. 정책관련문서 크롤링 \n" \
         "\t 11. 정책관련문서 크롤링 : \n" \

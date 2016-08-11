@@ -30,17 +30,14 @@ class Department:
                         if town not in connection.receiver:
                             print(connection.sender, connection.receiver)
 
-    ### txt 파일로
-    def verify_dep_names_from_txt_file(self, txt_file_name, depts_list, towns_list):
-        # If there is a match
-        txt_file = open(txt_file_name, "r")
-        filtered_output = {}
+    ### Input: counted_connections_dict => (sender, receiver) : count
+    def verify_dep_names(self, counted_connections_dict, depts_list, towns_list):
         total_count = 0
+        filtered_output = {}
 
-        for line in txt_file.readlines():
-            sender = line.split("\t")[0]
-            receiver = line.split("\t")[1]
-            count = line.split("\t")[2]
+        for key, count in counted_connections_dict.items():
+            sender = key[0]
+            receiver = key[1]
 
             if any(dept in receiver for dept in depts_list):
                 for dept1 in depts_list:
@@ -57,7 +54,6 @@ class Department:
         print("total count of filtered docs: " + str(total_count))
         return filtered_output
 
-    ### txt 파일로
     def verify_dep_names_by_policy_and_date(self, edges_dict, depts_list, towns_list):
         total_count = 0
         filtered_edges_dict = {}
@@ -81,7 +77,6 @@ class Department:
                                     filtered_edges_dict[key] = {}
                                 filtered_edges_dict[key][(sender, dept1)] = count
                                 total_count += 1
-                            break
 
         #print("total count of filtered docs: " + str(total_count))
         #print(filtered_edges_dict)

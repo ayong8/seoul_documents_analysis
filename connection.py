@@ -1,6 +1,8 @@
 import sqlite3
 import csv
 import re
+from datetime import datetime, timedelta
+import pandas as pd
 
 DATABASE_NAME = "../seoul_documents_analysis/seoul_documents.db"
 
@@ -29,10 +31,8 @@ class Connection:
                         connection_counter_dict[(sender, receiver)] = 1
 
         print("# of kinds of edges: " + str(len(connection_counter_dict)))
-        with open("./data/edges_for_policy.txt", "w") as txt_file:
-            for key, count in connection_counter_dict.items():
-                #print(key[0], key[1], count)
-                txt_file.write(key[0] + "\t" + key[1] + "\t" + str(count) + "\n")
+
+        return connection_counter_dict
 
     ### 정책별, 날짜별로 정제해서 dictionary로 추출
     ### Input: a list of Connection objects = [ Connection0, Connection1, ... ]
@@ -74,10 +74,11 @@ class Connection:
             sender = connection.sender
             receivers = connection.receiver
             policy_id = connection.labels["policy_id"]
+            policy_dept = connection.labels["policy_dept"]
             policy_title = connection.labels["policy_title"]
             # Filter by policy_id and date
-            if (policy_id, policy_title) not in edges_count_dict_by_policy_and_date.keys():
-                edges_count_dict_by_policy_and_date[(policy_id, policy_title)] = {}
+            if (policy_id, policy_dept, policy_title) not in edges_count_dict_by_policy_and_date.keys():
+                edges_count_dict_by_policy_and_date[(policy_id, policy_dept, policy_title)] = {}
 
             # If sender and receiver exist
             if sender and receivers and (receivers != 'No receiver'):
@@ -85,10 +86,10 @@ class Connection:
                 for receiver in receivers.split(","):
                     # There is same entry that was already inserted in the dictionary,
                     if (sender, receiver) in edges_count_dict_by_policy_and_date[
-                        (policy_id, policy_title)].keys():
-                        edges_count_dict_by_policy_and_date[(policy_id, policy_title)][(sender, receiver)] += 1
+                        (policy_id, policy_dept, policy_title)].keys():
+                        edges_count_dict_by_policy_and_date[(policy_id, policy_dept, policy_title)][(sender, receiver)] += 1
                     else:
-                        edges_count_dict_by_policy_and_date[(policy_id, policy_title)][(sender, receiver)] = 1
+                        edges_count_dict_by_policy_and_date[(policy_id, policy_dept, policy_title)][(sender, receiver)] = 1
 
         return edges_count_dict_by_policy_and_date
 
@@ -101,12 +102,16 @@ class Connection:
         connections = []
 
         # Put together connections of all months
-        for i in range(from_month, to_month+1):
-            # 2d array expected (e.g., [ [sender1, receiver1-1,receiver1-2], [sender2, receiver2], ... ]
-            if i < 10:
-                connections_for_month = cursor.execute("SELECT idx, sender, receiver FROM documents_20150%d" % i)
-            else:
-                connections_for_month = cursor.execute("SELECT idx, sender, receiver FROM documents_2015%d" % i)
+        # from_month = YYYYDD, to_month = YYYYDD
+
+        from_date = datetime(int(from_month.split('-')[0]), int(from_month.split('-')[1]), 1)
+        to_date = datetime(int(to_month.split('-')[0]), int(to_month.split('-')[1]), 2)
+        date_dict = pd.DataFrame(pd.date_range(from_date, to_date, freq='M'))
+
+        for idx, date in date_dict.items():
+            months = [month.replace('-', '') for month in re.findall('[0-9]{4}-[0-9]{2}', str(date))]
+            for current_month in months:
+                connections_for_month = cursor.execute("SELECT idx, sender, receiver FROM documents_%s" % current_month)
             for connection in connections_for_month:
                 connection = Connection(connection[0], connection[1], connection[2], "")
                 connections.append(connection)
@@ -121,11 +126,12 @@ class Connection:
         cursor = conn.cursor()
         connections = []
 
-        rows = cursor.execute("SELECT pd.sender, pd.receiver, pd.policy_id, pd.doc_id, p.title, pd.date FROM policy_documents pd, policy p where pd.policy_id = p.id")
+        rows = cursor.execute("SELECT pd.sender, pd.receiver, pd.policy_id, pd.doc_id, p.title, p.department, pd.date FROM policy_documents pd, policy p where pd.policy_id = p.id")
         for connection in rows:
             id = connection[2] + "_" + str(connection[3])
             connection = Connection(id, connection[0], connection[1], \
-                                    { 'policy_id': connection[2], 'doc_id': connection[3], 'date': connection[5], 'policy_title': connection[4] } )
+                                    { 'policy_id': connection[2], 'policy_dept': connection[5], \
+                                      'doc_id': connection[3], 'date': connection[6], 'policy_title': connection[4] } )
             connections.append(connection)
 
         print("# of edges: " + str(len(connections)))
