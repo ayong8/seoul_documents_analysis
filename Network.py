@@ -83,10 +83,11 @@ class Network():
         (G, graph_pos, weights) = self.make_graph()
         nodes_centrality_dict = nx.degree_centrality(G)
 
-        #for node, centrality in nodes_centrality_dict.items():
-        #    print(node + ": " + "{0:.2f}".format(centrality))
+        for node, centrality in nodes_centrality_dict.items():
+            print(node + ": " + "{0:.2f}".format(centrality))
 
         return nodes_centrality_dict
+
 
 
 
