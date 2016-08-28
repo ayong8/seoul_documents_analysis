@@ -12,11 +12,11 @@ class Policy:
         self.keyword = keyword
 
     def insert_policy_info_to_DB(self, cursor):
-        cursor.execute("INSERT OR REPLACE into policy (id, title, area, department, period, is_public, writer, budget, keyword) \
-                       values(?,?,?,?,?,?,?,?,?);", (self.id, self.title, self.area, self.department, self.period, self.is_public, self.writer, self.budget, "") )
+        cursor.execute("INSERT OR REPLACE into policy2 (id, title, area, department, period, is_public, writer, budget, keyword) \
+                       values(?,?,?,?,?,?,?,?,?);", (self.id, self.title, self.area, self.department, self.period, self.is_public, self.writer, self.budget, self.keyword) )
 
     # cursor.row_factory = sqlite3.Row으로 받음
     def get_policies(self, cursor):
-        cursor = cursor.execute("select * from policy")
+        cursor = cursor.execute("select * from policy2")
 
         return cursor

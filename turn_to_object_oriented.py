@@ -6,6 +6,7 @@ import os
 import shutil
 import sqlite3
 import grequests
+import xlrd
 import re
 from selenium import webdriver
 
@@ -244,7 +245,9 @@ def Find_hwp_file_name_and_download_hwp_by_search_for_policy(policy, conn):
     for keyword in policy.keyword.split(","):
         keyword = keyword.replace("\n", "")
         print(keyword)
-        doc_url = "http://opengov.seoul.go.kr/sanction?&startDate=%s&endDate=%s" % (policy.date.from_date, policy.date.to_date)
+        #doc_url = "http://opengov.seoul.go.kr/sanction?&startDate=%s&endDate=%s" % (policy.date.from_date, policy.date.to_date)
+        doc_url = "http://opengov.seoul.go.kr/sanction?"
+
         for keyword_token in keyword.split("+"):
             url_for_keyword = "&searchField%" + "5B%" + "5D=TITLE&searchFieldOpt%" + "5B%" + "5D=%" + "3A&searchFieldKeyword%" + "5B%" + "5D=%s" % keyword_token
             doc_url += url_for_keyword
@@ -686,7 +689,7 @@ def main():
         cursor = conn.cursor()
         cursor.row_factory = sqlite3.Row
         cursor.execute("select * from policy")
-        #done_list = []
+        done_list = []
 
         for row in cursor:
             policy = Policy("", "", "", "", "", "", "", "", "", "")
@@ -700,6 +703,25 @@ def main():
             policy.date.from_date = policy.date.set_range_of_from_date(policy.date.from_date, "2011-01-01", "2016-07-31")
             policy.date.to_date = policy.date.set_range_of_to_date(policy.date.to_date, "2011-01-01", "2016-07-31")
             print("Updated Policy period is " + policy.date.from_date + ", " + policy.date.to_date)
+
+            if policy.id not in done_list:
+                Find_hwp_file_name_and_download_hwp_by_search_for_policy(policy, conn)
+            done_list.append(policy.id)
+            print("Done list is: " + str(done_list))
+
+    # 33. 서울시 홈페이지 검색을 통해 정책관련문서 검색하기
+    if option == '33':
+        cursor = conn.cursor()
+        cursor.row_factory = sqlite3.Row
+        cursor.execute("select * from policy2")
+        done_list = ['2015-101', '2015-102', '2015-103', '2015-101', '2015-102', '2015-103', '2015-104', '2015-105', '2015-106', '2015-108', '2015-109', '2015-110', '2015-111', '2015-112', '2015-113', '2015-114', '2015-115', '2015-116', '2015-117', '2015-118', '2015-119', '2015-120', '2015-121', '2015-122', '2015-123', '2015-124', '2015-125', '2015-101', '2015-102', '2015-103', '2015-104', '2015-105', '2015-106', '2015-108', '2015-109', '2015-110', '2015-111', '2015-112', '2015-113', '2015-114', '2015-115', '2015-116', '2015-117', '2015-118', '2015-119', '2015-120', '2015-121', '2015-122', '2015-123', '2015-124', '2015-125', '2015-126', '2015-127', '2015-101', '2015-102', '2015-103', '2015-104', '2015-105', '2015-106', '2015-108', '2015-109', '2015-110', '2015-111', '2015-112', '2015-113', '2015-114', '2015-115', '2015-116', '2015-117', '2015-118', '2015-119', '2015-120', '2015-121', '2015-122', '2015-123', '2015-124', '2015-125', '2015-126', '2015-127', '2015-128', '2015-129', '2015-130', '2015-131', '2015-132', '2015-136', '2015-138', '2015-139', '2015-140', '2015-141', '2015-142', '2015-143', '2015-144', '2015-145', '2015-146', '2015-147', '2015-148', '2015-149', '2015-150', '2015-151', '2015-153', '2015-154', '2015-155', '2015-156', '2015-157', '2015-158', '2015-160', '2015-162', '2015-163', '2015-164', '2015-165', '2015-166', '2015-167', '2015-168', '2015-169', '2015-170', '2015-171', '2015-172', '2015-173', '2015-174', '2015-175', '2015-176', '2015-178', '2015-179', '2015-180', '2015-181', '2015-182', '2015-183', '2015-184', '2015-185', '2015-186', '2015-187', '2015-188', '2015-189', '2015-190', '2015-191', '2015-192', '2015-193', '2015-194', '2015-195', '2015-196', '2015-197']
+
+        for row in cursor:
+            policy = Policy("", "", "", "", "", "", "", "", "", "")
+            # 정책객체 초기화
+            policy.id = row["id"]
+            policy.keyword = row["keyword"]
+            policy.title = row["title"]
 
             if policy.id not in done_list:
                 Find_hwp_file_name_and_download_hwp_by_search_for_policy(policy, conn)
@@ -782,6 +804,30 @@ def main():
                       policy.writer, policy.budget)
 
                 policy.insert_policy_info_to_DB(cursor)
+
+            conn.commit()
+        conn.close()
+
+    if option == '51-1':
+        workbook1 = xlrd.open_workbook('./data/policy_list_duplicate_filtered.xlsx', 'r', encoding_override="utf-8")
+        worksheet = workbook1.sheet_by_index(0)
+        nrows = worksheet.nrows
+
+        cursor = conn.cursor()
+
+        for row_num in range(nrows):
+            row_value = worksheet.row_values(row_num)
+
+            policy = Policy("", "", "", "", "", "", "", "", "", "")
+
+            policy.id = row_value[0]
+            policy.title = row_value[1]
+            policy.department = row_value[2]
+            policy.budget = row_value[3]
+            policy.keyword = row_value[8]
+            print(policy.keyword)
+
+            policy.insert_policy_info_to_DB(cursor)
 
             conn.commit()
         conn.close()
@@ -1038,6 +1084,7 @@ def menu():
 
         "그룹 5. DB queries \n" \
         "\t 51. Insert: 정책 데이터 저장 \n" \
+        "\t 51-1. Insert: 정책 데이터 from 평가자료 저장 \n" \
         "\t 52. Insert: 월별 수신자 정보 추출 from txt files & 저장\n"\
         "\t 53. Update: 정책 키워드 입력하기"
         "\t 56. Select: 일반문서 데이터를 정책 키워드로 검색하여 정책관련문서 추리기 \n" \
