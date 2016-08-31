@@ -1,5 +1,5 @@
 class Policy:
-    def __init__(self, id, title, area, period, department, is_public, writer, docs, budget, keyword):
+    def __init__(self, id, title, area, period, department, is_public, writer, docs, budget, keyword, num_of_google_search_results, num_of_naver_search_results):
         self.id = id
         self.title = title
         self.area = area

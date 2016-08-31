@@ -64,7 +64,7 @@ class Network():
 
         policy_file_name = policy_id + "_" + policy_title.replace(" ", "").replace("/", "").replace("'", "")
         plt.axis('off')
-        plt.savefig("./graphs_for_policy/%s.png" % (policy_file_name), bbox_inches="tight")
+        plt.savefig("./graphs_for_policy2/%s.png" % (policy_file_name), bbox_inches="tight")
         plt.clf()
         G.clear()
 
@@ -74,8 +74,6 @@ class Network():
         indegrees = G.in_degree().values()
         max_in = max(indegrees)
         centralization = float((N * max_in - sum(indegrees))) / (N - 1) ** 2
-
-        #print(centralization)
 
         return centralization
 

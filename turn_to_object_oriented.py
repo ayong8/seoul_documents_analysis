@@ -11,6 +11,7 @@ import re
 from selenium import webdriver
 
 import requests
+from bs4 import BeautifulSoup
 from tqdm import tqdm
 from datetime import datetime, timedelta
 import pandas as pd
@@ -451,6 +452,7 @@ def Extract_hwp_sources_and_find_receivers_for_policy(txt_file_name):
     doc_id = ''.join(re.findall(r'(?:_)([0-9]+)(?:_)', txt_file_name))
 
     receiver_text = [ text.replace(" ","") for text in re.findall('(?:<CHAR>)(.*?)(?:</CHAR>)', hwp_code) ]
+    print(receiver_text)
 
     if "수신" in receiver_text:
         if "수신자참조" in receiver_text:
@@ -460,11 +462,11 @@ def Extract_hwp_sources_and_find_receivers_for_policy(txt_file_name):
             else:
                 receiver = "No receiver"
         else:
-            if "수신" in receiver_text:
-                receiver_index = receiver_text.index("수신") + 1
-                receiver = receiver_text[receiver_index]
-            else:
-                receiver = "No receiver"
+            receiver_index = receiver_text.index("수신") + 1
+            receiver = receiver_text[receiver_index]
+    elif "수신자" in receiver_text:
+        receiver_index = receiver_text.index("수신자") + 1
+        receiver = receiver_text[receiver_index]
     else:
         receiver = "No receiver"
 
@@ -509,7 +511,7 @@ def main():
         start = int(input("Enter the start index : "))
 
         end = 0
-        range_idx = 30
+        range_idx = 10
 
         # node script를 통해 hwp파일을 txt파일로 변환한다
         for i in range(1, 3000):
@@ -538,6 +540,7 @@ def main():
 
         department = Department("")
         depts_list = department.get_all_departments("./data/seoul_departments.txt")
+        depts_divisions_list = department.get_all_departments("./data/seoul_departments_divisions.txt")
         towns_list = department.get_all_towns_in_seoul()
 
         connections = connection.get_senders_and_receivers_by_month(from_month, to_month)
@@ -557,6 +560,7 @@ def main():
     if option == '9':
         department = Department("")
         depts_list = department.get_all_departments("seoul_departments.txt")
+        depts_divisions_list = department.get_all_departments("./data/seoul_departments_divisions.txt")
         towns_list = department.get_all_towns_in_seoul()
         connections = connection.get_senders_and_receivers_by_month(1, 1)
         counted_connections_dict = connection.count_connections(connections)
@@ -595,7 +599,7 @@ def main():
                 response2 = requests.get("http://opengov.seoul.go.kr" + policy_url)  # Project information page
                 response2_content = response2.content.decode().replace('\n', '').replace('\t', '')
 
-                policy = Policy("", "", "", "", "", "", "", "", "", "")
+                policy = Policy("", "", "", "", "", "", "", "", "", "", "", "")
 
                 print("Starting this policy url: " + "http://opengov.seoul.go.kr" + policy_url)
                 policy.id = re.findall('(?:사업번호</th><td>)([0-9-]+)(?:<)', response2_content)[0]
@@ -628,7 +632,7 @@ def main():
         cursor2 = conn.cursor()
         # Open text files and extract receivers from hwp codes
         # Get receivers and write them to excel file
-        for txt_file_name in glob.glob("/Volumes/Backup/data/txt_files/txt_files_by_policy/*.txt"):
+        for txt_file_name in glob.glob("/Volumes/Backup/data/txt_files/txt_files_by_policy2/*.txt"):
             if Extract_hwp_sources_and_find_receivers_for_policy(txt_file_name) != None:
                 (policy_id, doc_id, receiver) = Extract_hwp_sources_and_find_receivers_for_policy(txt_file_name)
                 # 입력할 셀의 인덱스를 만든다(L => 13번째 컬럼)
@@ -647,7 +651,7 @@ def main():
 
         filtered_connections_dict = department.verify_dep_names_from_txt_file_by_policy_and_date("./data/edges_for_policy.txt", depts_list,
                                                                               towns_list)
-        department.write_csv_for_gephi(depts_list, filtered_connections_dict, "./data/edges_list_for_policy.csv")
+        department.write_csv_for_gephi(depts_list, filtered_connections_dict, "./data/edges_list_for_policy2.csv")
 
     if option == '15':
         connections = connection.get_senders_and_receivers_by_month(1, 1)
@@ -667,7 +671,7 @@ def main():
         policies = []
 
         for row in cursor:
-            policy = Policy("", "", "", "", "", "", "", "", "", "")
+            policy = Policy("", "", "", "", "", "", "", "", "", "", "", "")
             # 정책객체 초기화
             policy.id = row["id"]
             policy.title = row["title"]
@@ -692,7 +696,7 @@ def main():
         done_list = []
 
         for row in cursor:
-            policy = Policy("", "", "", "", "", "", "", "", "", "")
+            policy = Policy("", "", "", "", "", "", "", "", "", "", "", "")
             # 정책객체 초기화
             policy.id = row["id"]
             policy.keyword = row["keyword"]
@@ -717,7 +721,7 @@ def main():
         done_list = ['2015-101', '2015-102', '2015-103', '2015-101', '2015-102', '2015-103', '2015-104', '2015-105', '2015-106', '2015-108', '2015-109', '2015-110', '2015-111', '2015-112', '2015-113', '2015-114', '2015-115', '2015-116', '2015-117', '2015-118', '2015-119', '2015-120', '2015-121', '2015-122', '2015-123', '2015-124', '2015-125', '2015-101', '2015-102', '2015-103', '2015-104', '2015-105', '2015-106', '2015-108', '2015-109', '2015-110', '2015-111', '2015-112', '2015-113', '2015-114', '2015-115', '2015-116', '2015-117', '2015-118', '2015-119', '2015-120', '2015-121', '2015-122', '2015-123', '2015-124', '2015-125', '2015-126', '2015-127', '2015-101', '2015-102', '2015-103', '2015-104', '2015-105', '2015-106', '2015-108', '2015-109', '2015-110', '2015-111', '2015-112', '2015-113', '2015-114', '2015-115', '2015-116', '2015-117', '2015-118', '2015-119', '2015-120', '2015-121', '2015-122', '2015-123', '2015-124', '2015-125', '2015-126', '2015-127', '2015-128', '2015-129', '2015-130', '2015-131', '2015-132', '2015-136', '2015-138', '2015-139', '2015-140', '2015-141', '2015-142', '2015-143', '2015-144', '2015-145', '2015-146', '2015-147', '2015-148', '2015-149', '2015-150', '2015-151', '2015-153', '2015-154', '2015-155', '2015-156', '2015-157', '2015-158', '2015-160', '2015-162', '2015-163', '2015-164', '2015-165', '2015-166', '2015-167', '2015-168', '2015-169', '2015-170', '2015-171', '2015-172', '2015-173', '2015-174', '2015-175', '2015-176', '2015-178', '2015-179', '2015-180', '2015-181', '2015-182', '2015-183', '2015-184', '2015-185', '2015-186', '2015-187', '2015-188', '2015-189', '2015-190', '2015-191', '2015-192', '2015-193', '2015-194', '2015-195', '2015-196', '2015-197']
 
         for row in cursor:
-            policy = Policy("", "", "", "", "", "", "", "", "", "")
+            policy = Policy("", "", "", "", "", "", "", "", "", "", "", "")
             # 정책객체 초기화
             policy.id = row["id"]
             policy.keyword = row["keyword"]
@@ -749,16 +753,17 @@ def main():
     if option == '42':
         department = Department("")
         depts_list = department.get_all_departments("./data/seoul_departments.txt")
+        depts_divisions_list = department.get_all_departments("./data/seoul_departments_divisions.txt")
         towns_list = department.get_all_towns_in_seoul()
         connections = connection.get_senders_and_receivers()
         edges_dict = connection.count_connections_by_policy(connections)
 
-        filtered_edges_dict = department.verify_dep_names_by_policy_and_date(edges_dict, depts_list,
+        filtered_edges_dict = department.verify_dep_names_by_policy_and_date(edges_dict, depts_list, depts_divisions_list,
                                                                              towns_list)
 
         for key1, edges in filtered_edges_dict.items():
             policy_id = key1[0]
-            policy_title = key1[1]
+            policy_title = key1[2]
             network = None
             network = Network(edges)
             network.make_whole_policy_graph(policy_id, policy_title)
@@ -782,7 +787,7 @@ def main():
                 response2 = requests.get("http://opengov.seoul.go.kr" + policy_url)  # Project information page
                 response2_content = response2.content.decode().replace('\n', '').replace('\t', '')
 
-                policy = Policy("", "", "", "", "", "", "", "", "", "")
+                policy = Policy("", "", "", "", "", "", "", "", "", "", "", "")
 
                 print("Starting this policy url: " + "http://opengov.seoul.go.kr" + policy_url)
                 policy.id = re.findall('(?:사업번호</th><td>)([0-9-]+)(?:<)', response2_content)[0]
@@ -818,7 +823,7 @@ def main():
         for row_num in range(nrows):
             row_value = worksheet.row_values(row_num)
 
-            policy = Policy("", "", "", "", "", "", "", "", "", "")
+            policy = Policy("", "", "", "", "", "", "", "", "", "", "", "")
 
             policy.id = row_value[0]
             policy.title = row_value[1]
@@ -876,11 +881,12 @@ def main():
 
         department = Department("")
         depts_list = department.get_all_departments("./data/seoul_departments.txt")
+        depts_divisions_list = department.get_all_departments("./data/seoul_departments_divisions.txt")
         towns_list = department.get_all_towns_in_seoul()
         connections = connection.get_senders_and_receivers()
         edges_dict = connection.count_connections_by_policy(connections)
 
-        filtered_edges_dict = department.verify_dep_names_by_policy_and_date(edges_dict, depts_list,
+        filtered_edges_dict = department.verify_dep_names_by_policy_and_date(edges_dict, depts_list, depts_divisions_list,
                                                                              towns_list)
 
         with open('policy_data.csv', 'w') as csvfile:
@@ -907,10 +913,10 @@ def main():
                             policy_dept = max(nodes_centrality_dict, key=nodes_centrality_dict.get)
                             centrality = nodes_centrality_dict[policy_dept]
                             print(row["id"], row["title"], policy_dept, "{0:.2f}".format(centralization_score), \
-                                  "{0:.2f}".format(centrality), row["budget"], row["area"])
+                                  "{0:.2f}".format(centrality), row["budget"], row["area"], row["num_of_google_search_results"], row["num_of_naver_search_results"])
 
                         writer.writerow([row["id"], row["title"], policy_dept, "{0:.2f}".format(centralization_score), \
-                             "{0:.2f}".format(centrality), row["budget"], row["area"]])
+                             "{0:.2f}".format(centrality), row["budget"], row["area"], row["num_of_google_search_results"], row["num_of_naver_search_results"]])
 
 
         conn.commit()
@@ -923,7 +929,7 @@ def main():
         cursor2.row_factory = sqlite3.Row
 
         policy_doc = PolicyDocument("", "", "", "", "", "", "", "", "", "", "", "", "")
-        policy = Policy("", "", "", "", "", "", "", "", "", "")
+        policy = Policy("", "", "", "", "", "", "", "", "", "", "", "")
         cursor_policies = policy.get_policies(cursor)
 
         for policy in cursor_policies:
@@ -1045,8 +1051,109 @@ def main():
 
         csvfile.close()
 
+    if option == '71':
+        cursor1 = conn.cursor()
+        cursor2 = conn.cursor()
+        cursor3 = conn.cursor()
+
+        keywords_policy1 = cursor1.execute("select id, keyword, period from policy").fetchall()
+        keywords_policy2 = cursor2.execute("select id, keyword from policy2").fetchall()
+        done_list = ['2015-43', '2015-49', '2015-44', '2015-51', '2015-47', '2015-42', '2015-41', '2015-48', '2015-53', '2015-55', '2015-52', '2015-50', '2015-46', '2015-54', '2015-45', '2015-36', '2015-31', '2015-37', '2015-26', '2015-30', '2015-33', '2015-38', '2015-29', '2015-34', '2015-28', '2015-27', '2015-35', '2015-40', '2015-32', '2015-39', '2015-22', '2015-20', '2015-16', '2015-14', '2015-11', '2015-15', '2015-13', '2015-12', '2015-18', '2015-21', '2015-17', '2015-23', '2015-19', '2015-24', '2015-25', '2015-9', '2014-84', '2014-82', '2015-6', '2014-80', '2015-3', '2015-4', '2014-81', '2014-83', '2015-5', '2015-8', '2015-2', '2015-10', '2015-1', '2015-7', '2014-77', '2014-75', '2014-74', '2014-73', '2014-68', '2014-66', '2014-76', '2014-64', '2014-70', '2014-65', '2014-72', '2014-79', '2014-78', '2014-71', '2014-69', '2014-53', '2014-60', '2014-54', '2014-56', '2014-62', '2014-63', '2014-49', '2014-61', '2014-59', '2014-57', '2014-52', '2014-51', '2014-58', '2014-55', '2014-50', '2014-35', '2014-34', '2014-42', '2014-47', '2014-36', '2014-46', '2014-32', '2014-41', '2014-48', '2014-37', '2014-40', '2014-38', '2014-33', '2014-39', '2014-44', '2014-23', '2014-18', '2014-30', '2014-27', '2014-17', '2014-20', '2014-24', '2014-28', '2014-25', '2014-22', '2014-26', '2014-31', '2014-19', '2014-29', '2014-21', '2014-13', '2014-10', '2014-2', '2014-4', '2014-11', '2014-3', '2014-8', '2014-15', '2014-9', '2014-16', '2014-7', '2014-6', '2014-5', '2014-14', '2014-12', '2013-29', '2013-28', '2013-31', '2013-32', '2013-33', '2013-34', '2014-1', '2013-27', '2013-35', '2013-25', '2013-30', '2013-36', '2013-39', '2013-26', '2013-37', '2013-10', '2013-22', '2013-8', '2013-13', '2013-7', '2013-9', '2013-23', '2013-17', '2013-15', '2013-24', '2013-18', '2013-14', '2013-11', '2013-19', '2013-5', '2013-1', '2013-3', '2012-50', '2013-2', '2012-35', '2012-49', '2012-48', '2012-42', '2012-41', '2012-43', '2012-47', '2012-39', '2012-38', '2012-34', '2012-36', '2012-28', '2012-12', '2012-31', '2012-30', '2012-11', '2012-15', '2012-2', '2012-33', '2012-5', '2012-6', '2012-7', '2012-10', '2012-23', '2012-13', '2012-4', '2011-114', '2011-111', '2011-97', '2011-96', '2011-107', '2011-104', '2011-112', '2011-115', '2011-105', '2011-100', '2011-103', '2011-108', '2011-119', '2011-106', '2011-122', '2011-89', '2011-86', '2011-80', '2011-77', '2011-81', '2011-94', '2011-93', '2011-85', '2011-92', '2011-87', '2011-78', '2011-79', '2011-83', '2011-82', '2011-88', '2011-59', '2011-53', '2011-71', '2011-55', '2011-51', '2011-72', '2011-57', '2011-46', '2011-62', '2011-61', '2011-45', '2011-74', '2011-60', '2011-76', '2011-58', '2011-19', '2011-42', '2011-22', '2011-43', '2011-29', '2011-39', '2011-33', '2011-44', '2011-32', '2011-27', '2011-25']
+
+        for row in keywords_policy1:
+            policy_id = row[0]
+            if policy_id not in done_list:
+                keywords = row[1]
+                keywords = keywords.replace("\"", "")
+
+                date = Date("", "")
+                print("Previous policy period is " + row[2])
+                (date.from_date, date.to_date) = date.format_date(row[2])
+                date.from_date = date.set_range_of_from_date(date.from_date, "2011-01-01",
+                                                             "2016-07-31")
+                date.to_date = date.set_range_of_to_date(date.to_date, "2011-01-01", "2016-07-31")
+                print("Updated Policy period is " + date.from_date + ", " + date.to_date)
+                num_g_results = 0
+                header = {
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106' }
+                for keyword in keywords.split(","):
+                    keyword_for_query = ""
+                    for keyword_token in keyword.split("+"):
+                        keyword_for_query += "intitle:" + keyword_token + "+"
+                    response = requests.get("https://www.google.com/search",
+                                            params={'q': keyword_for_query + "서울" + "+site:go.kr", 'tbs': "cdr:1,cd_min:"
+                                                            + date.from_date + ".,cd_max:" + date.to_date },
+                                            headers=header)
+                    #response = requests.get("https://www.google.com/search", params={'q': "allintitle:" + keyword + "+site:go.kr"})response = requests.get("https://www.google.com/search", params={'q': "allintitle:" + keyword + "+site:go.kr"})
+                    response_content = response.content.decode('ISO-8859-1')
+                    print(response.url)
+                    soup = BeautifulSoup(response.text, "lxml")
+                    res = soup.find("div", {"id": "resultStats"})
+                    if res == None:
+                        num_g_results += 0
+                    else:
+                        num_g_results += int(''.join(re.findall(('([0-9]+)(?:개)'), res.text)))
+                    print(keyword + ": " + str(num_g_results))
+
+                done_list.append(policy_id)
+                print(done_list)
+                cursor3.execute("update policy set num_of_google_search_results=? where id=?", (num_g_results, policy_id))
+                conn.commit()
+        conn.close()
+
+    if option == '72':
+        cursor1 = conn.cursor()
+        cursor2 = conn.cursor()
+        cursor3 = conn.cursor()
+
+        keywords_policy1 = cursor1.execute("select id, keyword, period from policy").fetchall()
+        keywords_policy2 = cursor2.execute("select id, keyword, period from policy2").fetchall()
+
+        for row in keywords_policy1:
+            policy_id = row[0]
+            keywords = row[1]
+            keywords.replace("\"", "")
+            date = Date("", "")
+            print("Previous policy period is " + row[2])
+            (date.from_date, date.to_date) = date.format_date(row[2])
+            date.from_date = date.set_range_of_from_date(date.from_date, "2011-01-01",
+                                                                       "2016-07-31")
+            date.to_date = date.set_range_of_to_date(date.to_date, "2011-01-01", "2016-07-31")
+            print("Updated Policy period is " + date.from_date + ", " + date.to_date)
+            from_date_form1 = date.from_date.replace("-", ".")
+            to_date_form1 = date.to_date.replace("-", ".")
+            from_date_form2 = date.from_date.replace("-", "")
+            to_date_form2 = date.to_date.replace("-", "")
+            num_n_results = 0
+
+            client_id = "OdALI37PxDDUCagUkTA2"
+            client_secret = "oryjGn7SCV"
+            url = "https://openapi.naver.com/v1/search/news.xml?"
+            header = { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36' }
+
+            for keyword in keywords.split(","):
+                keyword = keyword.replace("+", "")
+                url = "https://search.naver.com/search.naver?where=news&se=0&query=%s+\"서울\"" \
+                                        "&ie=utf8&sm=tab_opt&sort=0&photo=0&field=0&reporter_article=&pd=3&ds=%s&de=%s" \
+                                        "&docid=&nso=so:r,p:from%sto%s,a:all&mynews=0&mson=0&refresh_start=0&related=0" \
+                                        % (keyword, from_date_form1, to_date_form1, from_date_form2, to_date_form2)
+                response = requests.get(url, headers=header)
 
 
+                response_content = response.content.decode('ISO-8859-1')
+                #print(response.text)
+                print(url)
+                soup = BeautifulSoup(response.text, "lxml")
+                res = soup.find("div", {"class": "title_desc all_my"})
+                if res == None:
+                    num_n_results += 0
+                else:
+                    num_n_results += int(''.join(re.findall(('(?<=/) [0-9]+'), res.text)))
+                print(keyword + ": " + str(num_n_results))
+
+            cursor3.execute("update policy set num_of_naver_search_results=? where id=?", (num_n_results, policy_id))
+            conn.commit()
+        conn.close()
 
 
     if option == '99':
@@ -1080,7 +1187,8 @@ def menu():
         "\t 32. 서울시 홈페이지 검색을 통해 정책관련문서 검색하기 \n"\
 
         "그룹 4. 네트워크 시각화 \n" \
-        "\t 41. 정책문서 시각화 \n" \
+        "\t 41. 정책문서 시각화(정책별/월별) \n" \
+        "\t 41. 정책문서 시각화(정책별) \n" \
 
         "그룹 5. DB queries \n" \
         "\t 51. Insert: 정책 데이터 저장 \n" \
@@ -1096,6 +1204,9 @@ def menu():
         "\t 62. 정책별 네트워크 + centrality \n" \
         "\t 63. policy by department matrix for centrality and export to csv \n" \
         "\t 64. import two mode matrix, multiply by transposed one, then get one-mode \n" \
+
+        "그룹 7. 검색 엔진 크롤링 \n" \
+        "\t 71. 정책 키워드로 구글에서 go.kr 검색결과 개수 도출  \n" \
         )
 
 main()
