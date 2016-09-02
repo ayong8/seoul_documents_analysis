@@ -1155,6 +1155,40 @@ def main():
             conn.commit()
         conn.close()
 
+    ########### !!!!!!!!! 조단위 컨트롤 x
+    if option == '91':
+        cursor = conn.cursor()
+        cursor_update = conn.cursor()
+        cursor.row_factory = sqlite3.Row
+        cursor.execute("select * from policy")
+
+        budget_pair_dict = { '백만': '000000', '천': '0000', '억': '00000000' }
+
+        for row in cursor:
+            budget = row["budget"]
+            policy_id = row["id"]
+            budget_refined_text = ""
+            budget = budget.replace(",","")
+            budget_numerix_suffix = ""
+
+            if not re.findall("[0-9]", budget):
+                budget_refined_text = "-"
+                print(budget_refined_text)
+            else:
+                budget_numeric_part = ''.join(re.findall("([0-9]+)(?:[ㄱ-ㅎㅏ-ㅣ가-힣]+)", budget))
+                budget_korean_suffix = ''.join(re.findall("([ㄱ-ㅎㅏ-ㅣ가-힣]+)(?:원)", budget))
+
+                for budget_korean, budget_numeric in budget_pair_dict.items():
+                    if budget_korean == budget_korean_suffix:
+                        budget_numerix_suffix = budget_numeric
+
+                budget_refined_text = budget_numeric_part + budget_numerix_suffix
+                print(budget_refined_text)
+
+            cursor_update.execute("update policy set budget=? where id=?", (budget_refined_text, policy_id))
+
+        conn.commit()
+        conn.close()
 
     if option == '99':
         txt_file_path = "/Volumes/Backup/data/txt_files/txt_files_by_policy/2011-36_1304270_20140417.txt"
@@ -1207,6 +1241,11 @@ def menu():
 
         "그룹 7. 검색 엔진 크롤링 \n" \
         "\t 71. 정책 키워드로 구글에서 go.kr 검색결과 개수 도출  \n" \
+        "\t 72. 정책 키워드로 네이버에서 뉴스 검색결과 개수 도출  \n" \
+
+        "그룹 9. etc \n" \
+        "\t 91. 예산 데이터를 numeric으로 정제  \n" \
+        "\t 92. 기간 데이터를 numeric으로 정제(YYYYMMDD - YYYYMMDD)  \n" \
         )
 
 main()
