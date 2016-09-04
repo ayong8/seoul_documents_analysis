@@ -13,7 +13,9 @@ from selenium import webdriver
 import requests
 from bs4 import BeautifulSoup
 from tqdm import tqdm
-from datetime import datetime, timedelta
+import datetime
+from datetime import timedelta
+
 import pandas as pd
 
 from Policy import Policy
@@ -1119,6 +1121,16 @@ def main():
             date.from_date = date.set_range_of_from_date(date.from_date, "2011-01-01",
                                                                        "2016-07-31")
             date.to_date = date.set_range_of_to_date(date.to_date, "2011-01-01", "2016-07-31")
+
+            # 종료 후 한달 후까지 확장해서 검색하기
+            to_date_formatted = datetime.date(int(date.to_date.split("-")[0]), int(date.to_date.split("-")[1]), int(date.to_date.split("-")[2]))
+            max_date_for_to_date = datetime.date(2016, 7, 31)
+
+            if to_date_formatted < max_date_for_to_date:
+                date.to_date = to_date_formatted + timedelta(days=30)
+
+            print("Updated Policy period is " + str(date.from_date) + ", " + str(date.to_date))
+
             print("Updated Policy period is " + date.from_date + ", " + date.to_date)
             from_date_form1 = date.from_date.replace("-", ".")
             to_date_form1 = date.to_date.replace("-", ".")
@@ -1155,6 +1167,7 @@ def main():
             conn.commit()
         conn.close()
 
+
     ########### !!!!!!!!! 조단위 컨트롤 x
     if option == '91':
         cursor = conn.cursor()
@@ -1189,6 +1202,22 @@ def main():
 
         conn.commit()
         conn.close()
+
+    if option == '92':
+        cursor = conn.cursor()
+        cursor_update = conn.cursor()
+        cursor.row_factory = sqlite3.Row
+        cursor.execute("select * from policy")
+
+        for row in cursor:
+            policy_id = row["id"]
+            policy = Policy("", "", "", "", "", "", "", "", "", "", "", "")
+            policy.date = Date("", "")
+            print("Policy period is " + row["period"])
+            (policy.date.from_date, policy.date.to_date) = policy.date.format_date(row["period"])
+
+            period_refined_text = policy.date.from_date.replace("-", "") + " - " + policy.date.to_date.replace("-", "")
+            print(period_refined_text)
 
     if option == '99':
         txt_file_path = "/Volumes/Backup/data/txt_files/txt_files_by_policy/2011-36_1304270_20140417.txt"
