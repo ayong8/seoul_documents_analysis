@@ -15,9 +15,12 @@ class Network():
     def make_graph(self):
         edges = []
         for edge, count in self.edges.items():
+            sender = edge[0].replace(" ", "")
+            receiver = edge[1].replace(" ", "")
             # Transform dictionary into tuples with three elements (source, target, weight)
-            #print(edge[0], edge[1], count)
-            edges.append((edge[0], edge[1], count))
+            # In case sender and receiver are the same, then take that edge out
+            if sender != receiver:
+                edges.append((sender, receiver, count))
 
         fp1 = fm.FontProperties(
             fname="./NotoSansCJKkr-Regular.otf")  # Free Font https://www.google.com/get/noto/pkgs/NotoSansKorean-windows.zip
@@ -71,18 +74,47 @@ class Network():
     def calculate_centralization_of_policy_graph(self, policy_id, policy_title):
         (G, graph_pos, weights) = self.make_graph()
         N = G.order()
-        indegrees = G.in_degree().values()
-        max_in = max(indegrees)
-        centralization = float((N * max_in - sum(indegrees))) / (N - 1) ** 2
+        degrees = G.degree(weight='weight').values()
+        print(degrees)
+        max_degree = max(degrees)
+        centralization = float((N * max_degree - sum(degrees))) / (N - 1) ** 2
 
         return centralization
 
-    def calculate_centrality_of_policy_graph(self, policy_id, policy_title):
+    def calculate_centrality_of_policy_graph(self, policy_id, policy_dept, policy_title):
         (G, graph_pos, weights) = self.make_graph()
-        nodes_centrality_dict = nx.degree_centrality(G)
+        #nodes_centrality_dict = nx.degree_centrality(G)
+        nodes_centrality_dict = {}
+        total_weight = 0
+
+        for sender, receiver, edata in G.edges(data=True):
+            total_weight += edata['weight']
+
+        for sender, receiver, edata in G.edges(data=True):
+            print(sender, receiver, edata['weight'])
+            weight_sum_dept = 0
+            if sender not in nodes_centrality_dict.keys():
+                for sender1, receiver1, edata1 in G.edges(data=True):
+                    if (sender == sender1) or (sender == receiver1):
+                        weight_sum_dept += int(edata1['weight'])
+                nodes_centrality_dict[sender] = weight_sum_dept / total_weight
+
+            weight_sum_dept = 0
+            if receiver not in nodes_centrality_dict.keys():
+                for sender2, receiver2, edata2 in G.edges(data=True):
+                    if (receiver == sender2) or (receiver == receiver2):
+                        weight_sum_dept += int(edata2['weight'])
+                nodes_centrality_dict[receiver] = weight_sum_dept / total_weight
 
         for node, centrality in nodes_centrality_dict.items():
-            print(node + ": " + "{0:.2f}".format(centrality))
+            # e.g., '푸른도시국 산지방재과'면, '산지방재과'만 dept name으로 잡는다
+            if len(policy_dept.split(" ")) > 1:
+                policy_dept = policy_dept.split(" ")[1]
+                print("split: " + policy_dept)
+            if node == policy_dept:
+                print(node + ": " + "{0:.2f}".format(centrality) + "*")
+            #else:
+            #    print(node + ": " + "{0:.2f}".format(centrality))
 
         return nodes_centrality_dict
 
