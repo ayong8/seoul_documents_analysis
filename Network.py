@@ -14,26 +14,26 @@ class Network():
 
     def make_graph(self):
         edges = []
+        G = nx.DiGraph()
+
         for edge, count in self.edges.items():
             sender = edge[0].replace(" ", "")
             receiver = edge[1].replace(" ", "")
             # Transform dictionary into tuples with three elements (source, target, weight)
             # In case sender and receiver are the same, then take that edge out
             if sender != receiver:
-                edges.append((sender, receiver, count))
+                G.add_edge(sender, receiver, weight=count, weight2=1)
 
         fp1 = fm.FontProperties(
             fname="./NotoSansCJKkr-Regular.otf")  # Free Font https://www.google.com/get/noto/pkgs/NotoSansKorean-windows.zip
         nx.set_fontproperties(fp1)
 
-        G = nx.DiGraph()
-        G.add_weighted_edges_from(edges)
+        print(G.edges(data=True))
 
-        graph_pos = nx.spring_layout(G)
+        graph_pos = nx.spectral_layout(G)
         weights = [weight / 2 for (source, target, weight) in edges]
 
         return (G, graph_pos, weights)
-
 
     def draw_policy_graph_by_month(self, policy_id, month, policy_title):
         print("Now: " + policy_id + ", " + month)
@@ -117,6 +117,30 @@ class Network():
             #    print(node + ": " + "{0:.2f}".format(centrality))
 
         return nodes_centrality_dict
+
+    def calculate_closeness_centrality_of_policy_graph(self, policy_id, policy_dept, policy_title):
+        (G, graph_pos, weights) = self.make_graph()
+        closeness_centrality_dict = nx.closeness_centrality(G)
+
+        for node, closeness in closeness_centrality_dict.items():
+            #if node == policy_dept:
+            print(node + ": " + "{0:.2f}".format(closeness))
+
+        return closeness_centrality_dict
+
+    def calculate_betweenness_centrality_of_policy_graph(self, policy_id, policy_dept, policy_title):
+        (G, graph_pos, weights) = self.make_graph()
+        betweenness_centrality_dict = nx.betweenness_centrality(G)
+
+        for node, closeness in betweenness_centrality_dict.items():
+            # if node == policy_dept:
+            print(node + ": " + "{0:.2f}".format(closeness))
+
+        return betweenness_centrality_dict
+
+    def calculate_transitivity_of_policy_graph(self, policy_id, policy_dept, policy_title):
+        (G, graph_pos, weights) = self.make_graph()
+
 
 
 

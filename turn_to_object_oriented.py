@@ -906,23 +906,37 @@ def main():
                 network = Network(edges)
                 centralization_score = network.calculate_centralization_of_policy_graph(policy_id, policy_title)
                 nodes_centrality_dict = network.calculate_centrality_of_policy_graph(policy_id, policy_dept, policy_title)
+                nodes_closeness_centrality_dict = network.calculate_closeness_centrality_of_policy_graph(policy_id, policy_dept, policy_title)
+                nodes_betweenness_centrality_dict = network.calculate_betweenness_centrality_of_policy_graph(policy_id,
+                                                                                                         policy_dept,
+                                                                                                         policy_title)
                 cursor.execute("select * from policy")
                 for row in cursor:
                     if policy_id == row["id"]:
+                        print("Now: " + policy_id)
                         if policy_dept in nodes_centrality_dict.keys():
                             centrality = nodes_centrality_dict[policy_dept]
-                            print(row["id"], row["title"], policy_dept, "{0:.2f}".format(centralization_score), \
-                                                "{0:.2f}".format(centrality), row["budget"], row["area"])
+                            closeness_centrality = nodes_closeness_centrality_dict[policy_dept]
+                            betweenness_centrality = nodes_betweenness_centrality_dict[policy_dept]
+
+                        #    centrality = nodes_centrality_dict[policy_dept]
+                        #print(row["id"], row["title"], policy_dept, "{0:.2f}".format(centralization_score), \
+                        #                        "{0:.2f}".format(centrality), row["budget"], row["area"])
+
                         # 이름이 정확히 일치하는 부서가 없다면,
                         else:
                             # Just capture the department with the maximum centrality
                             policy_dept = max(nodes_centrality_dict, key=nodes_centrality_dict.get)
                             centrality = nodes_centrality_dict[policy_dept]
+                            closeness_centrality = nodes_closeness_centrality_dict[policy_dept]
+                            betweenness_centrality = nodes_betweenness_centrality_dict[policy_dept]
                             print(row["id"], row["title"], policy_dept, "{0:.2f}".format(centralization_score), \
                                   "{0:.2f}".format(centrality), row["period"], row["budget"], row["area"], row["num_of_google_search_results"], row["num_of_naver_search_results"])
 
+                        print(centrality, closeness_centrality, betweenness_centrality)
                         writer.writerow([row["id"], row["title"], policy_dept, "{0:.2f}".format(centralization_score), \
-                             "{0:.2f}".format(centrality), row["period"], row["budget"], row["area"], row["num_of_google_search_results"], row["num_of_naver_search_results"]])
+                             "{0:.2f}".format(centrality), "{0:.2f}".format(closeness_centrality), "{0:.2f}".format(betweenness_centrality), \
+                                         row["period"], row["budget"], row["area"], row["num_of_google_search_results"], row["num_of_naver_search_results"]])
 
 
         conn.commit()
@@ -978,6 +992,7 @@ def main():
             network = Network(edges)
             network.calculate_centralization_of_policy_graph(policy_id, policy_title)
 
+    ### 정책문서, degree centrality
     if option == '62':
         department = Department("")
         depts_list = department.get_all_departments("./data/seoul_departments.txt")
@@ -1055,6 +1070,48 @@ def main():
         #print(size(one_mode_matrix))
 
         csvfile.close()
+
+    if option == '65':
+        department = Department("")
+        depts_list = department.get_all_departments("./data/seoul_departments.txt")
+        depts_divisions_list = department.get_all_departments("./data/seoul_departments_divisions.txt")
+        towns_list = department.get_all_towns_in_seoul()
+        connections = connection.get_senders_and_receivers()
+        edges_dict = connection.count_connections_by_policy(connections)
+
+        filtered_edges_dict = department.verify_dep_names_by_policy_and_date(edges_dict, depts_list, depts_divisions_list,
+                                                                             towns_list)
+
+        for key1, edges in filtered_edges_dict.items():
+            policy_id = key1[0]
+            policy_dept = key1[1]
+            policy_title = key1[2]
+            network = None
+            network = Network(edges)
+            print(policy_id, policy_dept)
+            closeness_centrality_dict = network.calculate_closeness_centrality_of_policy_graph(policy_id, policy_dept, policy_title)
+
+    if option == '67':
+        department = Department("")
+        depts_list = department.get_all_departments("./data/seoul_departments.txt")
+        depts_divisions_list = department.get_all_departments("./data/seoul_departments_divisions.txt")
+        towns_list = department.get_all_towns_in_seoul()
+        connections = connection.get_senders_and_receivers()
+        edges_dict = connection.count_connections_by_policy(connections)
+
+        filtered_edges_dict = department.verify_dep_names_by_policy_and_date(edges_dict, depts_list,
+                                                                             depts_divisions_list,
+                                                                             towns_list)
+
+        for key1, edges in filtered_edges_dict.items():
+            policy_id = key1[0]
+            policy_dept = key1[1]
+            policy_title = key1[2]
+            network = None
+            network = Network(edges)
+            print(policy_id, policy_dept)
+            betweenness_centrality_dict = network.calculate_closeness_centrality_of_policy_graph(policy_id, policy_dept,
+                                                                                               policy_title)
 
     if option == '71':
         cursor1 = conn.cursor()
@@ -1346,14 +1403,15 @@ def menu():
         "\t 52. Insert: 월별 수신자 정보 추출 from txt files & 저장\n"\
         "\t 53. Update: 정책 키워드 입력하기"
         "\t 56. Select: 일반문서 데이터를 정책 키워드로 검색하여 정책관련문서 추리기 \n" \
-        "\t 57. Select: 정책별 사업번호, 사업명, 주무부서 and centralization, centrality of primary department -> csv로 출력 \n" \
+        "\t 57. !!!!!Select: 정책별 사업번호, 사업명, 주무부서 and centralization, centrality of primary department -> csv로 출력 \n" \
         "\t 58. Select: policy 별로 policy documents들의 가장 빠른 문서와 가장 나중 문서의 차를 구해서 기간이 얼마나 되는지 도출해내기 \n" \
  \
         "그룹 6. 네트워크 속성 \n" \
         "\t 61. 정책별 네트워크 + centralization  \n" \
-        "\t 62. 정책별 네트워크 + centrality \n" \
+        "\t 62. 정책별 네트워크 + degree centrality \n" \
         "\t 63. policy by department matrix for centrality and export to csv \n" \
         "\t 64. import two mode matrix, multiply by transposed one, then get one-mode \n" \
+        "\t 65. 정책별 네트워크 + closeness centrality \n" \
 
         "그룹 7. 검색 엔진 크롤링 \n" \
         "\t 71. 정책 키워드로 구글에서 go.kr 검색결과 개수 도출  \n" \
