@@ -895,13 +895,17 @@ def main():
         filtered_edges_dict = department.verify_dep_names_by_policy_and_date(edges_dict, depts_list, depts_divisions_list,
                                                                              towns_list)
 
-        with open('policy_data2.csv', 'w') as csvfile:
+        with open('policy_data3.csv', 'w') as csvfile:
             writer = csv.writer(csvfile, delimiter=",")
             print(len(filtered_edges_dict.items()))
             for key, edges in filtered_edges_dict.items():
                 #print(key1[0])
                 policy_id = key[0]
                 policy_dept = key[1]
+                # e.g., '푸른도시국 산지방재과'면, '산지방재과'만 dept name으로 잡는다
+                if len(policy_dept.split(" ")) > 1:
+                    policy_dept = policy_dept.split(" ")[1]
+                    print("split: " + policy_dept)
                 policy_title = key[2]
                 network = Network(edges)
                 centralization_score = network.calculate_centralization_of_policy_graph(policy_id, policy_title)
@@ -910,6 +914,8 @@ def main():
                 nodes_betweenness_centrality_dict = network.calculate_betweenness_centrality_of_policy_graph(policy_id,
                                                                                                          policy_dept,
                                                                                                          policy_title)
+                nodes_transitivity_cycle_coefficient_dict = network.calculate_transitivity_cycle_coefficient_of_policy_graph(policy_id, policy_dept, policy_title)
+
                 cursor.execute("select * from policy")
                 for row in cursor:
                     if policy_id == row["id"]:
@@ -918,24 +924,26 @@ def main():
                             centrality = nodes_centrality_dict[policy_dept]
                             closeness_centrality = nodes_closeness_centrality_dict[policy_dept]
                             betweenness_centrality = nodes_betweenness_centrality_dict[policy_dept]
-
-                        #    centrality = nodes_centrality_dict[policy_dept]
-                        #print(row["id"], row["title"], policy_dept, "{0:.2f}".format(centralization_score), \
-                        #                        "{0:.2f}".format(centrality), row["budget"], row["area"])
+                            transitivity_coefficient = nodes_transitivity_cycle_coefficient_dict[policy_dept][0]
+                            cycle_coefficient = nodes_transitivity_cycle_coefficient_dict[policy_dept][1]
 
                         # 이름이 정확히 일치하는 부서가 없다면,
                         else:
+                            print(policy_id + ": no match")
                             # Just capture the department with the maximum centrality
                             policy_dept = max(nodes_centrality_dict, key=nodes_centrality_dict.get)
                             centrality = nodes_centrality_dict[policy_dept]
                             closeness_centrality = nodes_closeness_centrality_dict[policy_dept]
                             betweenness_centrality = nodes_betweenness_centrality_dict[policy_dept]
+                            transitivity_coefficient = 0
+                            cycle_coefficient = 0
                             print(row["id"], row["title"], policy_dept, "{0:.2f}".format(centralization_score), \
                                   "{0:.2f}".format(centrality), row["period"], row["budget"], row["area"], row["num_of_google_search_results"], row["num_of_naver_search_results"])
 
                         print(centrality, closeness_centrality, betweenness_centrality)
                         writer.writerow([row["id"], row["title"], policy_dept, "{0:.2f}".format(centralization_score), \
                              "{0:.2f}".format(centrality), "{0:.2f}".format(closeness_centrality), "{0:.2f}".format(betweenness_centrality), \
+                                         "{0:.2f}".format(transitivity_coefficient), "{0:.2f}".format(cycle_coefficient), \
                                          row["period"], row["budget"], row["area"], row["num_of_google_search_results"], row["num_of_naver_search_results"]])
 
 
@@ -968,10 +976,6 @@ def main():
                 num_of_days = 0
 
             print(policy["id"] + ": " + str(num_of_days).replace(" days, ", "").replace(" day, ", "").replace("0:00:00", ""))
-
-
-
-
 
         conn.commit()
         conn.close()
@@ -1085,11 +1089,41 @@ def main():
         for key1, edges in filtered_edges_dict.items():
             policy_id = key1[0]
             policy_dept = key1[1]
+            # e.g., '푸른도시국 산지방재과'면, '산지방재과'만 dept name으로 잡는다
+            if len(policy_dept.split(" ")) > 1:
+                policy_dept = policy_dept.split(" ")[1]
+                print("split: " + policy_dept)
             policy_title = key1[2]
             network = None
             network = Network(edges)
             print(policy_id, policy_dept)
             closeness_centrality_dict = network.calculate_closeness_centrality_of_policy_graph(policy_id, policy_dept, policy_title)
+
+    if option == '66':
+        department = Department("")
+        depts_list = department.get_all_departments("./data/seoul_departments.txt")
+        depts_divisions_list = department.get_all_departments("./data/seoul_departments_divisions.txt")
+        towns_list = department.get_all_towns_in_seoul()
+        connections = connection.get_senders_and_receivers()
+        edges_dict = connection.count_connections_by_policy(connections)
+
+        filtered_edges_dict = department.verify_dep_names_by_policy_and_date(edges_dict, depts_list,
+                                                                             depts_divisions_list,
+                                                                             towns_list)
+
+        for key1, edges in filtered_edges_dict.items():
+            policy_id = key1[0]
+            policy_dept = key1[1]
+            # e.g., '푸른도시국 산지방재과'면, '산지방재과'만 dept name으로 잡는다
+            if len(policy_dept.split(" ")) > 1:
+                policy_dept = policy_dept.split(" ")[1]
+                print("split: " + policy_dept)
+            policy_title = key1[2]
+            network = None
+            network = Network(edges)
+            print(policy_id, policy_dept)
+            betweenness_centrality_dict = network.calculate_closeness_centrality_of_policy_graph(policy_id, policy_dept,
+                                                                                               policy_title)
 
     if option == '67':
         department = Department("")
@@ -1106,12 +1140,16 @@ def main():
         for key1, edges in filtered_edges_dict.items():
             policy_id = key1[0]
             policy_dept = key1[1]
+            # e.g., '푸른도시국 산지방재과'면, '산지방재과'만 dept name으로 잡는다
+            if len(policy_dept.split(" ")) > 1:
+                policy_dept = policy_dept.split(" ")[1]
+                print("split: " + policy_dept)
             policy_title = key1[2]
             network = None
             network = Network(edges)
             print(policy_id, policy_dept)
-            betweenness_centrality_dict = network.calculate_closeness_centrality_of_policy_graph(policy_id, policy_dept,
-                                                                                               policy_title)
+            transitivity_dict = network.calculate_transitivity_cycle_coefficient_of_policy_graph(policy_id, policy_dept,
+                                                                                                 policy_title)
 
     if option == '71':
         cursor1 = conn.cursor()
@@ -1412,6 +1450,8 @@ def menu():
         "\t 63. policy by department matrix for centrality and export to csv \n" \
         "\t 64. import two mode matrix, multiply by transposed one, then get one-mode \n" \
         "\t 65. 정책별 네트워크 + closeness centrality \n" \
+        "\t 66. 정책별 네트워크 + betweenness centrality \n" \
+        "\t 67. 정책별 네트워크 + transitivity \n" \
 
         "그룹 7. 검색 엔진 크롤링 \n" \
         "\t 71. 정책 키워드로 구글에서 go.kr 검색결과 개수 도출  \n" \

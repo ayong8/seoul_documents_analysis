@@ -2,6 +2,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import os
 import matplotlib.font_manager as fm
+import collections
 
 PATH_TO_POLICY_GRAPHS_BY_MONTH = "./graphs_for_policy_by_month"
 PATH_TO_POLICY_GRAPHS = "./graphs_for_policy"
@@ -107,10 +108,6 @@ class Network():
                 nodes_centrality_dict[receiver] = weight_sum_dept / total_weight
 
         for node, centrality in nodes_centrality_dict.items():
-            # e.g., '푸른도시국 산지방재과'면, '산지방재과'만 dept name으로 잡는다
-            if len(policy_dept.split(" ")) > 1:
-                policy_dept = policy_dept.split(" ")[1]
-                print("split: " + policy_dept)
             if node == policy_dept:
                 print(node + ": " + "{0:.2f}".format(centrality) + "*")
             #else:
@@ -138,8 +135,46 @@ class Network():
 
         return betweenness_centrality_dict
 
-    def calculate_transitivity_of_policy_graph(self, policy_id, policy_dept, policy_title):
+    # Returns: dictionary of { primary_dept_name: [ primary_dept_of_transitivity_coef, primary_dept_of_cycle_coef ] }
+    def calculate_transitivity_cycle_coefficient_of_policy_graph(self, policy_id, policy_dept, policy_title):
         (G, graph_pos, weights) = self.make_graph()
+        transitivity_count = 0
+        cycle_count = 0
+        transitivity_coefficient = 0
+        cycle_coefficient = 0
+
+        for start_node in G.nodes():
+            num_of_neighbors_of_policy_dept = 0
+            if start_node == policy_dept:
+                for end_node in G.nodes():
+                    try:
+                        all_paths = nx.all_simple_paths(G, source=start_node, target=end_node)
+                        #print(shortest_path)
+                        #print(len(shortest_path))
+                        for path in all_paths:
+                            if (len(path) > 2):
+                                # Denominator of score (all paths between start node and end node via an intermediate node)
+                                num_of_neighbors_of_policy_dept += 1
+                                # Count Transitivity
+                                if G.has_edge(start_node, end_node):
+                                    transitivity_count += 1
+                                    print("Transitivity + 1")
+                                    print(path)
+                                if G.has_edge(end_node, start_node):
+                                    cycle_count += 1
+                                    print("Cycle + 1")
+                                    print(path)
+                    #if shortest_path doesn't exist
+                    except nx.exception.NetworkXNoPath as e:
+                        pass
+                if num_of_neighbors_of_policy_dept != 0:
+                    transitivity_coefficient = transitivity_count / num_of_neighbors_of_policy_dept
+                    cycle_coefficient = cycle_count / num_of_neighbors_of_policy_dept
+                print(policy_id + ": " + str(transitivity_coefficient) + ", " + str(cycle_coefficient))
+            else:
+                pass
+
+        return { policy_dept: [transitivity_coefficient, cycle_coefficient]}
 
 
 
