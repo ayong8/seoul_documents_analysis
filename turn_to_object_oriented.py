@@ -895,7 +895,7 @@ def main():
         filtered_edges_dict = department.verify_dep_names_by_policy_and_date(edges_dict, depts_list, depts_divisions_list,
                                                                              towns_list)
 
-        with open('policy_data3.csv', 'w') as csvfile:
+        with open('policy_data4.csv', 'w') as csvfile:
             writer = csv.writer(csvfile, delimiter=",")
             print(len(filtered_edges_dict.items()))
             for key, edges in filtered_edges_dict.items():

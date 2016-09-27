@@ -152,7 +152,7 @@ class Network():
                         #print(shortest_path)
                         #print(len(shortest_path))
                         for path in all_paths:
-                            if (len(path) > 2):
+                            if (len(path) == 3):
                                 # Denominator of score (all paths between start node and end node via an intermediate node)
                                 num_of_neighbors_of_policy_dept += 1
                                 # Count Transitivity
@@ -170,7 +170,7 @@ class Network():
                 if num_of_neighbors_of_policy_dept != 0:
                     transitivity_coefficient = transitivity_count / num_of_neighbors_of_policy_dept
                     cycle_coefficient = cycle_count / num_of_neighbors_of_policy_dept
-                print(policy_id + ": " + str(transitivity_coefficient) + ", " + str(cycle_coefficient))
+                print(policy_id + " of transitivity and cycle: " + str(transitivity_coefficient) + ", " + str(cycle_coefficient))
             else:
                 pass
 
