@@ -118,7 +118,7 @@ class Date:
 
         from_date = from_year + "-" + from_month + "-" + from_day
         to_date = to_year + "-" + to_month + "-" + to_day
-        print(from_date, to_date)
+        #print(from_date, to_date)
 
         return (from_date, to_date)
 
