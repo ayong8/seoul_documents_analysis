@@ -142,7 +142,7 @@ class Network():
         cycle_count = 0
         transitivity_coefficient = 0
         cycle_coefficient = 0
-
+        print(policy_dept)
         for start_node in G.nodes():
             num_of_neighbors_of_policy_dept = 0
             if start_node == policy_dept:
